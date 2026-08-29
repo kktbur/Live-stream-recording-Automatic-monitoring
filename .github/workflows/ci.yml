@@ -1,0 +1,94 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-build-self-check:
+    name: Test, build, and self-check
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    env:
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            uv.lock
+
+      - name: Install project and development dependencies
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          ./.venv/Scripts/python.exe -m pip install --upgrade pip
+          ./.venv/Scripts/python.exe -m pip install --editable ".[dev]"
+
+      - name: Check first-party source
+        shell: pwsh
+        run: ./.venv/Scripts/python.exe -m ruff check src tests tools
+
+      - name: Run tests
+        shell: pwsh
+        run: ./.venv/Scripts/python.exe -m pytest tests -q -p no:cacheprovider
+
+      - name: Prepare packaging-only FFmpeg path fixtures
+        shell: pwsh
+        run: |
+          # Release builds must provide the verified LGPL FFmpeg runtime described
+          # in README.md. CI uses valid local Windows executables only to verify
+          # that PyInstaller includes and resolves the expected runtime paths.
+          $runtimeDir = "runtime/ffmpeg"
+          Copy-Item "$env:SystemRoot/System32/where.exe" "$runtimeDir/ffmpeg.exe"
+          Copy-Item "$env:SystemRoot/System32/where.exe" "$runtimeDir/ffprobe.exe"
+
+      - name: Build Windows application
+        shell: pwsh
+        run: pwsh -NoProfile -File packaging/build.ps1
+
+      - name: Run packaged self-test
+        shell: pwsh
+        run: |
+          $dataDir = Join-Path $env:RUNNER_TEMP "reco-box-self-test"
+          $env:RECO_BOX_DATA_DIR = $dataDir
+          $exe = Resolve-Path "dist/Reco Box/RecoBox.exe"
+          $process = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "Packaged self-test exited with code $($process.ExitCode)"
+          }
+
+          $reportPath = Join-Path $dataDir "self-check.json"
+          if (-not (Test-Path -LiteralPath $reportPath)) {
+            throw "Packaged self-test did not create $reportPath"
+          }
+
+          $report = Get-Content -Raw -LiteralPath $reportPath | ConvertFrom-Json
+          if (-not $report.passed) {
+            throw "Packaged self-test report did not pass"
+          }
+
+          $internalDir = "dist/Reco Box/_internal"
+          $conflicts = Get-ChildItem -LiteralPath $internalDir -File | Where-Object {
+            $_.Name -match '^(icu|api-ms-win-|ucrtbase|MSVCP140)'
+          }
+          if ($conflicts) {
+            throw "Conflicting root runtime DLLs were packaged: $($conflicts.Name -join ', ')"
+          }

@@ -86,6 +86,20 @@ pwsh -NoProfile -File ./packaging/build_installer.ps1
 - `packaging/`：PyInstaller 与 Inno Setup 构建配置
 - `runtime/ffmpeg/`：本地发布构建输入；二进制不进入 Git 历史
 
+参与开发、报告平台失效或提交新平台适配前，请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按 [SECURITY.md](SECURITY.md) 私密报告。
+
+## Roadmap
+
+- Improve TLS verification compatibility.
+- Improve Xiaohongshu and TikTok resolver stability.
+- Add automatic update checking.
+- Improve recording recovery after network interruption.
+- Add additional livestream platforms within the anonymous-access boundary.
+- Improve Windows packaging and code signing.
+- Expand GitHub Actions CI and Windows regression coverage.
+
+Roadmap 表示当前方向，不构成发布时间或平台长期可用性的承诺。具体工作通过 GitHub Issues 跟踪。
+
 ## 许可证与免责声明
 
 Reco Box 自有代码采用 [MIT License](LICENSE)。上游解析器、FFmpeg、Qt/PySide6 和其他依赖保留各自许可证，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
