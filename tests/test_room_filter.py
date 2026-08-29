@@ -15,13 +15,13 @@ def test_filter_search_and_sort_rooms(tmp_path) -> None:
     source = RoomListModel(database)
     proxy = RoomFilterProxyModel(source)
 
-    proxy.setStatusFilter("录制中")
+    proxy.setStatusFilter("recording")
     assert _names(proxy) == ["Beta"]
-    proxy.setStatusFilter("全部状态")
+    proxy.setStatusFilter("all")
     proxy.setSearchText("眼镜")
     assert _names(proxy) == ["Beta"]
     proxy.setSearchText("")
-    proxy.setSortMode("名称正序")
+    proxy.setSortMode("name_asc")
     assert _names(proxy) == ["Alpha", "Beta"]
 
 

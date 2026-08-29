@@ -91,3 +91,41 @@ def test_taobao_reports_anonymous_access_limit_without_calling_upstream() -> Non
     resolver = DouyinLiveRecorderResolver(spider_module=SimpleNamespace())
     with pytest.raises(AnonymousAccessUnavailableError, match="不导入账号或 Cookie"):
         asyncio.run(resolver.resolve("https://m.tb.cn/example"))
+
+
+@pytest.mark.parametrize(
+    ("url", "platform", "function_name"),
+    [
+        ("https://www.twitch.tv/demo", Platform.TWITCH, "get_twitchtv_stream_data"),
+        ("https://www.sooplive.com/demo", Platform.SOOP, "get_sooplive_stream_data"),
+        ("https://chzzk.naver.com/live/demo", Platform.CHZZK, "get_chzzk_stream_data"),
+        ("https://www.showroom-live.com/room/profile?room_id=1", Platform.SHOWROOM, "get_showroom_stream_data"),
+        ("https://www.bigo.tv/cn/demo", Platform.BIGO, "get_bigo_stream_url"),
+        ("https://17.live/en/live/1", Platform.LIVE17, "get_17live_stream_url"),
+        ("https://www.liveme.com/en/v/1/index.html", Platform.LIVEME, "get_liveme_stream_url"),
+        ("https://www.picarto.tv/demo", Platform.PICARTO, "get_picarto_stream_url"),
+        ("https://live.shopee.sg/share?session=1", Platform.SHOPEE, "get_shopee_stream_url"),
+    ],
+)
+def test_overseas_resolvers_use_anonymous_upstream_functions(
+    url, platform, function_name
+) -> None:
+    captured = {}
+
+    async def resolve_upstream(value, proxy_addr=None, cookies=None, **kwargs):
+        captured.update(url=value, proxy=proxy_addr, cookies=cookies, kwargs=kwargs)
+        return {
+            "anchor_name": "demo",
+            "is_live": True,
+            "record_url": "https://cdn.example/live.m3u8",
+        }
+
+    resolver = DouyinLiveRecorderResolver(
+        spider_module=SimpleNamespace(**{function_name: resolve_upstream})
+    )
+    result = asyncio.run(resolver.resolve(url, proxy="127.0.0.1:7890"))
+
+    assert result.platform is platform
+    assert result.stream_urls == ("https://cdn.example/live.m3u8",)
+    assert captured["cookies"] is None
+    assert captured["proxy"] == "http://127.0.0.1:7890"

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .localization import tr
 from .resources import application_resource
 
 MEDIA_EXTENSIONS = frozenset({".ts", ".mp4", ".mkv", ".flv", ".mp3", ".m4a"})
@@ -81,17 +82,17 @@ def probe_media_file(ffprobe_path: Path, media_path: Path) -> ProbeResult:
         return ProbeResult(False, 0, "", str(error)[:300])
     if completed.returncode != 0:
         message = completed.stderr.replace("\r", " ").replace("\n", " ").strip()
-        return ProbeResult(False, 0, "", message[:300] or "ffprobe 验证失败")
+        return ProbeResult(False, 0, "", message[:300] or tr("ffprobe 验证失败"))
     try:
         payload = json.loads(completed.stdout)
     except json.JSONDecodeError:
-        return ProbeResult(False, 0, "", "ffprobe 返回了无效 JSON")
+        return ProbeResult(False, 0, "", tr("ffprobe 返回了无效 JSON"))
     return parse_probe_payload(payload)
 
 
 def probe_media_files(ffprobe_path: Path, paths: list[Path]) -> ProbeResult:
     if not paths:
-        return ProbeResult(False, 0, "", "录制目录中没有媒体文件")
+        return ProbeResult(False, 0, "", tr("录制目录中没有媒体文件"))
     duration = 0.0
     codecs: list[str] = []
     for path in paths:
@@ -108,7 +109,7 @@ def probe_media_files(ffprobe_path: Path, paths: list[Path]) -> ProbeResult:
 def parse_probe_payload(payload: dict[str, Any]) -> ProbeResult:
     streams = payload.get("streams")
     if not isinstance(streams, list) or not streams:
-        return ProbeResult(False, 0, "", "文件中没有可识别的音视频流")
+        return ProbeResult(False, 0, "", tr("文件中没有可识别的音视频流"))
     codecs = []
     for stream in streams:
         if not isinstance(stream, dict):

@@ -110,6 +110,10 @@ class Database:
                 connection.execute(
                     "ALTER TABLE rooms ADD COLUMN file_name TEXT NOT NULL DEFAULT ''"
                 )
+            if "proxy" not in room_columns:
+                connection.execute(
+                    "ALTER TABLE rooms ADD COLUMN proxy TEXT NOT NULL DEFAULT ''"
+                )
             recording_columns = {
                 str(row["name"]) for row in connection.execute("PRAGMA table_info(recordings)")
             }

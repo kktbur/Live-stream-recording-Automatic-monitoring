@@ -11,6 +11,8 @@ from typing import Any
 from platformdirs import user_data_path
 
 from .domain import Platform
+from .localization import tr
+from .network import normalize_proxy
 from .platforms import detect_platform
 from .resources import upstream_resource
 
@@ -76,7 +78,7 @@ class DouyinLiveRecorderResolver:
         if self._spider is not None:
             return self._spider
         if not (self.upstream_path / "src" / "spider.py").exists():
-            raise RuntimeError(f"找不到已锁定的解析源码：{self.upstream_path}")
+            raise RuntimeError(tr("找不到已锁定的解析源码：{path}").format(path=self.upstream_path))
         upstream = str(self.upstream_path)
         if upstream not in sys.path:
             sys.path.insert(0, upstream)
@@ -115,9 +117,9 @@ class DouyinLiveRecorderResolver:
     async def resolve(self, url: str, proxy: str = "", quality: str = "原画") -> ResolvedStream:
         platform = detect_platform(url)
         if platform is Platform.UNKNOWN:
-            raise UnsupportedPlatformError("暂不支持该直播间链接")
+            raise UnsupportedPlatformError(tr("暂不支持该直播间链接"))
         spider = self._load_spider()
-        proxy_addr = proxy.strip() or None
+        proxy_addr = normalize_proxy(proxy) or None
         quality_code = QUALITY_CODES.get(quality, "OD")
 
         if platform is Platform.DOUYIN:
@@ -143,17 +145,87 @@ class DouyinLiveRecorderResolver:
             payload = await self._load_stream().get_stream_url(raw, quality_code, spec=True)
         elif platform is Platform.TAOBAO:
             raise AnonymousAccessUnavailableError(
-                "当前锁定版淘宝解析器要求登录会话，Reco Box 不导入账号或 Cookie，"
-                "因此暂不尝试绕过；后续需要实现匿名公开接口后才能启用。"
+                tr(
+                    "当前锁定版淘宝解析器要求登录会话，Reco Box 不导入账号或 Cookie，"
+                    "因此暂不尝试绕过；后续需要实现匿名公开接口后才能启用。"
+                )
             )
+        elif platform is Platform.TWITCASTING:
+            payload = await self._resolve_twitcasting_anonymous(spider, url, proxy_addr)
         else:
             function_names = {
                 Platform.XIAOHONGSHU: "get_xhs_stream_url",
                 Platform.JD: "get_jd_stream_url",
+                Platform.TWITCH: "get_twitchtv_stream_data",
+                Platform.SOOP: "get_sooplive_stream_data",
+                Platform.CHZZK: "get_chzzk_stream_data",
+                Platform.SHOWROOM: "get_showroom_stream_data",
+                Platform.BIGO: "get_bigo_stream_url",
+                Platform.LIVE17: "get_17live_stream_url",
+                Platform.LIVEME: "get_liveme_stream_url",
+                Platform.PICARTO: "get_picarto_stream_url",
+                Platform.SHOPEE: "get_shopee_stream_url",
             }
             function = getattr(spider, function_names[platform])
-            payload = await function(url, proxy_addr=proxy_addr, cookies=None)
+            if platform is Platform.SOOP:
+                payload = await function(
+                    url,
+                    proxy_addr=proxy_addr,
+                    cookies=None,
+                    username=None,
+                    password=None,
+                )
+            else:
+                payload = await function(url, proxy_addr=proxy_addr, cookies=None)
         return normalize_payload(platform, payload)
+
+    async def _resolve_twitcasting_anonymous(
+        self, spider: ModuleType, url: str, proxy_addr: str | None
+    ) -> dict[str, Any]:
+        """Resolve public TwitCasting rooms without invoking upstream login helpers."""
+        import json
+        import re
+
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.8",
+            "Referer": "https://twitcasting.tv/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/124.0",
+        }
+        if "login=true" in url.lower():
+            raise AnonymousAccessUnavailableError(tr("该 TwitCasting 直播间要求登录，匿名模式不可用"))
+        html = await spider.async_req(url, proxy_addr=proxy_addr, headers=headers)
+        anchor = re.search(r"<title>(.*?) \(@(.*?)\).*?Twit", str(html), re.DOTALL)
+        status = re.search(r'data-is-onlive="(.*?)"', str(html))
+        movie_id = re.search(r'data-movie-id="(.*?)"', str(html))
+        if not anchor or not status or not movie_id:
+            raise AnonymousAccessUnavailableError(
+                tr("该 TwitCasting 页面无法匿名读取，可能需要登录或已受访问限制")
+            )
+        result: dict[str, Any] = {
+            "anchor_name": f"{anchor.group(1).strip()}-{anchor.group(2)}-{movie_id.group(1)}",
+            "is_live": status.group(1) == "true",
+        }
+        if not result["is_live"]:
+            return result
+        anchor_id = url.split("?")[0].rstrip("/").rsplit("/", 1)[-1]
+        endpoint = (
+            "https://twitcasting.tv/streamserver.php?"
+            f"target={anchor_id}&mode=client&player=pc_web"
+        )
+        stream_text = await spider.async_req(endpoint, proxy_addr=proxy_addr, headers=headers)
+        streams = json.loads(str(stream_text)).get("tc-hls", {}).get("streams", {})
+        quality_order = {"high": 0, "medium": 1, "low": 2}
+        play_urls = [
+            value
+            for key, value in sorted(
+                streams.items(), key=lambda item: quality_order.get(item[0], 99)
+            )
+        ]
+        if not play_urls:
+            raise RuntimeError(tr("TwitCasting 未返回可录制的公开播放地址"))
+        result["play_url_list"] = play_urls
+        return result
 
 
 def normalize_payload(platform: Platform, payload: Any) -> ResolvedStream:

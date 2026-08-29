@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Property, QObject, QUrl, Signal, Slot
 
+from .localization import tr
 from .monitor import MonitoringCoordinator
 
 
@@ -12,7 +13,7 @@ class PreviewController(QObject):
         super().__init__()
         self.monitor = monitor
         self._source = QUrl()
-        self._title = "直播预览"
+        self._title = tr("直播预览")
         self._error = ""
 
     @Property(QUrl, notify=changed)
@@ -32,12 +33,12 @@ class PreviewController(QObject):
         resolved = self.monitor.stream_for_room(room_id)
         if resolved is None or not resolved.stream_urls:
             self._source = QUrl()
-            self._title = "直播预览"
-            self._error = "尚未取得直播流，请先点击“立即检查并录制”"
+            self._title = tr("直播预览")
+            self._error = tr("尚未取得直播流，请先点击“立即检查并录制”")
             self.changed.emit()
             return False
         self._source = QUrl(resolved.stream_urls[0])
-        self._title = resolved.title or resolved.streamer_name or "直播预览"
+        self._title = resolved.title or resolved.streamer_name or tr("直播预览")
         self._error = ""
         self.changed.emit()
         return True

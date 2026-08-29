@@ -75,6 +75,15 @@ New-Item -ItemType Directory -Path $RuntimeDestination -Force | Out-Null
 Get-ChildItem -LiteralPath $RuntimeSource -File |
     Copy-Item -Destination $RuntimeDestination -Force
 
+$NodeSource = Join-Path $ProjectDir "runtime\node"
+$NodeDestination = Join-Path $DistDir "Reco Box\_internal\runtime\node"
+if (-not (Test-Path -LiteralPath (Join-Path $NodeSource "node.exe"))) {
+    throw "Node.js runtime is missing: $NodeSource\node.exe"
+}
+New-Item -ItemType Directory -Path $NodeDestination -Force | Out-Null
+Get-ChildItem -LiteralPath $NodeSource -File |
+    Copy-Item -Destination $NodeDestination -Force
+
 $MediaBackend = Join-Path $DistDir "Reco Box\_internal\PySide6\plugins\multimedia\ffmpegmediaplugin.dll"
 if (-not (Test-Path -LiteralPath $MediaBackend)) {
     throw "Qt FFmpeg multimedia backend was not packaged: $MediaBackend"

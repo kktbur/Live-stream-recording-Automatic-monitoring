@@ -8,8 +8,9 @@ from pathlib import Path
 
 import PySide6
 
+from .localization import LANGUAGES
 from .resolver import DouyinLiveRecorderResolver
-from .resources import application_resource, package_resource, upstream_resource
+from .resources import application_resource, is_frozen, package_resource, upstream_resource
 
 
 def run_self_check(data_dir: Path) -> int:
@@ -42,9 +43,20 @@ def run_self_check(data_dir: Path) -> int:
     check_file("qt_ffmpeg_media_backend", media_backend)
     check_file("resolver_source", upstream_resource() / "src" / "spider.py")
 
+    for code, _ in LANGUAGES:
+        if code != "zh-CN":
+            check_file(
+                f"translation_{code}",
+                package_resource("translations", f"reco_box_{code}.qm"),
+            )
+
     node = shutil.which("node")
-    # Node.js is optional for the currently exposed platform paths.
-    checks["node"] = {"ok": bool(node), "required": False, "path": node or ""}
+    checks["node"] = {
+        "ok": bool(node),
+        "required": is_frozen(),
+        "required_for": ["liveme"],
+        "path": node or "",
+    }
     write_progress("resolver_import_started")
 
     try:

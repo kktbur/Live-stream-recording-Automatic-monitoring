@@ -15,6 +15,17 @@ the corresponding components.
 Reco Box uses a pinned, anonymous-only adapter and does not import platform
 account cookies.
 
+## Node.js v24.20.0 LTS
+
+- Project: https://nodejs.org/
+- Official Windows x64 archive: `node-v24.20.0-win-x64.zip`
+- License: MIT and bundled third-party notices in Node.js `LICENSE`
+- Archive SHA-256: `6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba`
+- Bundled files: `runtime/node/node.exe`, `runtime/node/LICENSE.txt`
+
+The installer includes this minimal runtime for the LiveMe JavaScript signing
+flow. The executable is a verified release input and is not committed to Git.
+
 ## FFmpeg 9.0.1 LGPL shared build
 
 - Project: https://ffmpeg.org/

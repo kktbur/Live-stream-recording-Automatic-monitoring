@@ -27,6 +27,7 @@ self-check-progress.json
 # Bundled executables are release inputs, not source history
 runtime/ffmpeg/*.exe
 runtime/ffmpeg/*.dll
+runtime/node/node.exe
 
 # Editors / OS
 .idea/

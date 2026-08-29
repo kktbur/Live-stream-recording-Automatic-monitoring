@@ -27,6 +27,16 @@ class Platform(StrEnum):
     YOUTUBE = "youtube"
     TAOBAO = "taobao"
     JD = "jd"
+    TWITCH = "twitch"
+    SOOP = "soop"
+    CHZZK = "chzzk"
+    TWITCASTING = "twitcasting"
+    SHOWROOM = "showroom"
+    BIGO = "bigo"
+    LIVE17 = "17live"
+    LIVEME = "liveme"
+    PICARTO = "picarto"
+    SHOPEE = "shopee"
     UNKNOWN = "unknown"
 
 

@@ -11,6 +11,7 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
 from PySide6.QtTest import QTest
 
+from reco_box.localization import LocalizationController
 from reco_box.monitor import MonitoringCoordinator
 from reco_box.preview import PreviewController
 from reco_box.resolver import DouyinLiveRecorderResolver
@@ -50,6 +51,8 @@ def test_main_qml_loads(tmp_path) -> None:
     engine.rootContext().setContextProperty("eventLogModel", EventLogModel(database))
     settings = SettingsController(database)
     engine.rootContext().setContextProperty("settingsController", settings)
+    localization = LocalizationController(app, database, True, tmp_path / "translations")
+    engine.rootContext().setContextProperty("localizationController", localization)
     engine.rootContext().setContextProperty("desktopActions", DesktopActions())
     engine.rootContext().setContextProperty("recordingManager", QObject())
     engine.rootContext().setContextProperty(

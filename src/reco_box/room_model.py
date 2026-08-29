@@ -14,6 +14,8 @@ from PySide6.QtCore import (
 )
 
 from .domain import Room, RoomStatus
+from .localization import tr
+from .network import normalize_proxy
 from .platforms import detect_platform
 from .storage import Database
 
@@ -43,6 +45,7 @@ class RoomListModel(QAbstractListModel):
     LineRole = Qt.UserRole + 19
     CheckIntervalRole = Qt.UserRole + 20
     FileNameRole = Qt.UserRole + 21
+    ProxyRole = Qt.UserRole + 22
 
     def __init__(self, database: Database):
         super().__init__()
@@ -73,6 +76,7 @@ class RoomListModel(QAbstractListModel):
             self.LineRole: b"recordingLine",
             self.CheckIntervalRole: b"checkIntervalSeconds",
             self.FileNameRole: b"fileName",
+            self.ProxyRole: b"roomProxy",
         }
 
     def rowCount(self, parent: QModelIndex | None = None) -> int:
@@ -109,6 +113,7 @@ class RoomListModel(QAbstractListModel):
             self.LineRole: room.line,
             self.CheckIntervalRole: room.check_interval_seconds,
             self.FileNameRole: room.file_name,
+            self.ProxyRole: room.proxy,
         }
         return values.get(role)
 
@@ -132,6 +137,7 @@ class RoomListModel(QAbstractListModel):
             check_interval_seconds=int(
                 self.database.get_setting("default_check_interval_seconds", "300")
             ),
+            proxy=self.database.get_setting("default_proxy", ""),
         )
         if not room.segment_enabled:
             room.segment_minutes = None
@@ -191,7 +197,7 @@ class RoomListModel(QAbstractListModel):
             RoomStatus.CONVERTING,
         }
         if any(room.status in busy for room in self.rooms):
-            return "仍有直播间正在录制或转换，请先全部暂停并等待收尾完成"
+            return tr("仍有直播间正在录制或转换，请先全部暂停并等待收尾完成")
         self.beginResetModel()
         try:
             for room in self.rooms:
@@ -253,6 +259,7 @@ class RoomListModel(QAbstractListModel):
         file_name: str,
         check_interval: str,
         save_root: str,
+        proxy: str,
         output_format: str,
         quality: str,
         line: str,
@@ -264,34 +271,38 @@ class RoomListModel(QAbstractListModel):
     ) -> str:
         room = self.get_room(room_id)
         if room is None:
-            return "找不到直播间"
+            return tr("找不到直播间")
         normalized_url = url.strip()
         if not normalized_url:
-            return "直播间地址不能为空"
+            return tr("直播间地址不能为空")
         existing = self.database.room_url_state(normalized_url)
         if existing and existing[0] != room_id:
-            return "该直播间地址已经存在"
+            return tr("该直播间地址已经存在")
         root = save_root.strip()
         if not root:
-            return "保存目录不能为空"
+            return tr("保存目录不能为空")
+        try:
+            normalized_proxy = normalize_proxy(proxy)
+        except ValueError as error:
+            return str(error)
         try:
             interval = int(check_interval)
         except ValueError:
-            return "检测间隔必须是正整数"
+            return tr("检测间隔必须是正整数")
         if interval < 30:
-            return "检测间隔不能低于 30 秒"
+            return tr("检测间隔不能低于 30 秒")
         minutes: int | None = None
         if segment_enabled:
             try:
                 minutes = int(segment_minutes)
             except ValueError:
-                return "分段分钟数必须是正整数"
+                return tr("分段分钟数必须是正整数")
             if minutes <= 0:
-                return "分段分钟数必须是正整数"
+                return tr("分段分钟数必须是正整数")
         allowed_formats = {"ts", "mp4", "mkv", "flv", "mp3", "m4a"}
         normalized_format = output_format.lower().strip()
         if normalized_format not in allowed_formats:
-            return "不支持该输出格式"
+            return tr("不支持该输出格式")
         room.streamer_name = streamer_name.strip() or "待识别主播"
         room.title = title.strip()
         room.url = normalized_url
@@ -299,6 +310,7 @@ class RoomListModel(QAbstractListModel):
         room.file_name = file_name.strip()
         room.check_interval_seconds = interval
         room.save_root = root
+        room.proxy = normalized_proxy
         room.output_format = normalized_format
         room.quality = quality.strip() or "原画"
         room.line = line.strip() or "线路1"
@@ -368,9 +380,9 @@ class RoomFilterProxyModel(QSortFilterProxyModel):
 
     def __init__(self, source: RoomListModel):
         super().__init__()
-        self._status_filter = "全部状态"
+        self._status_filter = "all"
         self._search_text = ""
-        self._sort_mode = "默认排序"
+        self._sort_mode = "default"
         self.setSourceModel(source)
         self.setDynamicSortFilter(True)
         source.countChanged.connect(self._refresh)
@@ -401,10 +413,10 @@ class RoomFilterProxyModel(QSortFilterProxyModel):
     @Slot(str)
     def setSortMode(self, value: str) -> None:
         self._sort_mode = value
-        if value == "名称正序":
+        if value == "name_asc":
             self.setSortRole(RoomListModel.NameRole)
             self.sort(0, Qt.SortOrder.AscendingOrder)
-        elif value == "名称倒序":
+        elif value == "name_desc":
             self.setSortRole(RoomListModel.NameRole)
             self.sort(0, Qt.SortOrder.DescendingOrder)
         else:
@@ -418,13 +430,13 @@ class RoomFilterProxyModel(QSortFilterProxyModel):
         index = source.index(source_row, 0, source_parent)
         status = str(source.data(index, RoomListModel.StatusRole) or "")
         enabled = bool(source.data(index, RoomListModel.EnabledRole))
-        if self._status_filter == "录制中" and status not in {"recording", "converting"}:
+        if self._status_filter == "recording" and status not in {"recording", "converting"}:
             return False
-        if self._status_filter == "监控中" and (
+        if self._status_filter == "monitoring" and (
             not enabled or status in {"recording", "converting", "disabled"}
         ):
             return False
-        if self._status_filter == "未开始" and enabled:
+        if self._status_filter == "not_started" and enabled:
             return False
         if not self._search_text:
             return True

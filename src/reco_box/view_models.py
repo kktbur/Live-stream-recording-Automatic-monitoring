@@ -17,6 +17,8 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFileDialog
 
 from .legacy_import import import_legacy_folder, inspect_legacy_folder
+from .localization import tr
+from .network import normalize_proxy
 from .room_model import RoomListModel
 from .storage import Database
 
@@ -111,6 +113,7 @@ class SettingsController(QObject):
             database.get_setting("default_segment_minutes", "5")
         )
         self._minimum_free_gb = int(database.get_setting("minimum_free_gb", "5"))
+        self._default_proxy = database.get_setting("default_proxy", "")
 
     @Property(str, notify=defaultsChanged)
     def defaultSaveRoot(self) -> str:
@@ -140,7 +143,11 @@ class SettingsController(QObject):
     def minimumFreeGb(self) -> int:
         return self._minimum_free_gb
 
-    @Slot(str, str, str, str, bool, str, str, result=str)
+    @Property(str, notify=defaultsChanged)
+    def defaultProxy(self) -> str:
+        return self._default_proxy
+
+    @Slot(str, str, str, str, bool, str, str, str, result=str)
     def saveDefaults(
         self,
         save_root: str,
@@ -150,21 +157,26 @@ class SettingsController(QObject):
         segment_enabled: bool,
         segment_minutes: str,
         minimum_free_gb: str,
+        default_proxy: str,
     ) -> str:
         if not save_root.strip():
-            return "默认录制目录不能为空"
+            return tr("默认录制目录不能为空")
         try:
             interval = int(check_interval)
             minutes = int(segment_minutes)
             free_gb = int(minimum_free_gb)
         except ValueError:
-            return "轮询秒数和分段分钟数必须是正整数"
+            return tr("轮询秒数和分段分钟数必须是正整数")
         if interval < 30:
-            return "轮询间隔不能低于 30 秒"
+            return tr("轮询间隔不能低于 30 秒")
         if minutes <= 0:
-            return "分段分钟数必须是正整数"
+            return tr("分段分钟数必须是正整数")
         if not 1 <= free_gb <= 1024:
-            return "磁盘保护阈值必须是 1 至 1024 GB"
+            return tr("磁盘保护阈值必须是 1 至 1024 GB")
+        try:
+            normalized_proxy = normalize_proxy(default_proxy)
+        except ValueError as error:
+            return str(error)
         self.database.set_setting("default_save_root", save_root.strip())
         self.database.set_setting("default_output_format", output_format.lower())
         self.database.set_setting("default_quality", quality)
@@ -172,6 +184,7 @@ class SettingsController(QObject):
         self.database.set_setting("default_segment_enabled", "1" if segment_enabled else "0")
         self.database.set_setting("default_segment_minutes", str(minutes))
         self.database.set_setting("minimum_free_gb", str(free_gb))
+        self.database.set_setting("default_proxy", normalized_proxy)
         self.reload()
         expected = {
             "default_save_root": save_root.strip(),
@@ -181,9 +194,10 @@ class SettingsController(QObject):
             "default_segment_enabled": "1" if segment_enabled else "0",
             "default_segment_minutes": str(minutes),
             "minimum_free_gb": str(free_gb),
+            "default_proxy": normalized_proxy,
         }
         if any(self.database.get_setting(key) != value for key, value in expected.items()):
-            return "设置保存后校验失败，请重试"
+            return tr("设置保存后校验失败，请重试")
         return ""
 
     @Slot()
@@ -202,6 +216,7 @@ class SettingsController(QObject):
             self.database.get_setting("default_segment_minutes", "5")
         )
         self._minimum_free_gb = int(self.database.get_setting("minimum_free_gb", "5"))
+        self._default_proxy = self.database.get_setting("default_proxy", "")
         self.defaultsChanged.emit()
 
 
@@ -218,7 +233,7 @@ class DesktopActions(QObject):
     @Slot(str, result=str)
     def chooseDirectory(self, initial: str) -> str:
         start = initial if initial.strip() and Path(initial).is_dir() else str(Path.home())
-        return QFileDialog.getExistingDirectory(None, "选择文件夹", start)
+        return QFileDialog.getExistingDirectory(None, tr("选择文件夹"), start)
 
     @Slot(str, result=bool)
     def openRecordingDirectories(self, joined_paths: str) -> bool:
@@ -286,7 +301,7 @@ class LegacyImportController(QObject):
         try:
             inspection = inspect_legacy_folder(Path(folder))
         except (OSError, ValueError, configparser.Error) as error:
-            self._preview_text = f"预检失败：{error}"
+            self._preview_text = tr("预检失败：{error}").format(error=error)
             self._result_text = ""
             self._report_path = ""
             self.changed.emit()
@@ -302,7 +317,7 @@ class LegacyImportController(QObject):
         try:
             result = import_legacy_folder(Path(folder), self.database)
         except (OSError, ValueError, configparser.Error) as error:
-            self._result_text = f"导入失败：{error}"
+            self._result_text = tr("导入失败：{error}").format(error=error)
             self.changed.emit()
             return False
         self.rooms.reload()

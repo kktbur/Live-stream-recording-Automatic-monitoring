@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reco-box"
-version = "0.1.4"
+version = "0.2.0"
 description = "Reco Box - local Windows livestream recorder UI"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -36,7 +36,7 @@ reco-box = "reco_box.app:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-reco_box = ["ui/*.qml"]
+reco_box = ["ui/*.qml", "translations/*.qm"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

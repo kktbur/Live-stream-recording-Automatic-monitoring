@@ -5,7 +5,9 @@ $CompilerCandidates = @(
     (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 7\ISCC.exe"),
     (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"),
     (Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"),
-    (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe")
+    (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
+    (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 7\ISCC.exe"),
+    (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe")
 )
 $Compiler = $CompilerCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $Compiler) {
@@ -22,7 +24,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup failed with exit code $LASTEXITCODE"
 }
 
-$SetupExe = Join-Path $ProjectDir "dist\installer\RecoBox-Setup-0.1.4.exe"
+$SetupExe = Join-Path $ProjectDir "dist\installer\RecoBox-Setup-0.2.0.exe"
 if (-not (Test-Path -LiteralPath $SetupExe)) {
     throw "Installer was not created: $SetupExe"
 }

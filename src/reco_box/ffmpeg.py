@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .domain import RecordingPlan, Room
+from .localization import tr
 from .output_paths import create_session_directory, segment_output_pattern, single_output_path
 
 
@@ -22,9 +23,9 @@ class FFmpegPlanner:
 
     def build(self, room: Room, stream: StreamInput, started_at: datetime) -> RecordingPlan:
         if not room.save_root:
-            raise ValueError("必须先设置录制保存目录")
+            raise ValueError(tr("必须先设置录制保存目录"))
         if room.segment_enabled and (room.segment_minutes is None or room.segment_minutes <= 0):
-            raise ValueError("分段分钟数必须是正整数")
+            raise ValueError(tr("分段分钟数必须是正整数"))
 
         session_dir = create_session_directory(
             Path(room.save_root), room.streamer_name, started_at

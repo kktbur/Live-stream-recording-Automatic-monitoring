@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from .localization import tr
+
 INVALID_WINDOWS_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 RESERVED_WINDOWS_NAMES = {
     "CON",
@@ -41,13 +43,13 @@ def create_session_directory(root: Path, streamer_name: str, started_at: datetim
 def segment_output_pattern(session_dir: Path, extension: str) -> Path:
     normalized = extension.lower().lstrip(".")
     if not normalized or not normalized.isalnum():
-        raise ValueError("输出格式必须是简单扩展名")
+        raise ValueError(tr("输出格式必须是简单扩展名"))
     return Path(session_dir) / f"%d.{normalized}"
 
 
 def single_output_path(session_dir: Path, extension: str, file_name: str = "") -> Path:
     normalized = extension.lower().lstrip(".")
     if not normalized or not normalized.isalnum():
-        raise ValueError("输出格式必须是简单扩展名")
+        raise ValueError(tr("输出格式必须是简单扩展名"))
     base_name = sanitize_component(file_name, "1") if file_name.strip() else "1"
     return Path(session_dir) / f"{base_name}.{normalized}"

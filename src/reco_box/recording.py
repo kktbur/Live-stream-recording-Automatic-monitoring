@@ -13,6 +13,7 @@ from PySide6.QtCore import QObject, QProcess, QRunnable, QThreadPool, QTimer, Si
 
 from .domain import RoomStatus
 from .ffmpeg import FFmpegPlanner, StreamInput, hidden_startup_info
+from .localization import tr
 from .media_probe import ProbeResult, find_ffprobe, media_files, probe_media_files
 from .resolver import ResolvedStream
 from .resources import application_resource
@@ -202,7 +203,7 @@ class RecordingManager(QObject):
             self.rooms.update_room_state(
                 room_id,
                 RoomStatus.ERROR,
-                error="未找到 FFmpeg；开发版需要设置 RECO_BOX_FFMPEG",
+                error=tr("未找到 FFmpeg；开发版需要设置 RECO_BOX_FFMPEG"),
             )
             return
         if not resolved.stream_urls:
@@ -232,7 +233,9 @@ class RecordingManager(QObject):
             self.rooms.update_room_state(
                 room_id,
                 RoomStatus.ERROR,
-                error=f"磁盘剩余空间低于 {minimum_free_gb:g} GB，已阻止开始录制",
+                error=tr("磁盘剩余空间低于 {minimum_free_gb:g} GB，已阻止开始录制").format(
+                    minimum_free_gb=minimum_free_gb
+                ),
             )
             return
 
@@ -324,7 +327,7 @@ class RecordingManager(QObject):
     @staticmethod
     def _selected_stream_url(line: str, stream_urls: tuple[str, ...]) -> str:
         if not stream_urls:
-            raise ValueError("未找到可用直播线路")
+            raise ValueError(tr("未找到可用直播线路"))
         digits = "".join(character for character in line if character.isdigit())
         index = max(0, int(digits or "1") - 1)
         return stream_urls[min(index, len(stream_urls) - 1)]
@@ -481,12 +484,12 @@ class RecordingManager(QObject):
     def _start_probe(self, recording_id: str, session_dir: Path) -> None:
         if self.ffprobe_path is None:
             self.database.update_recording_probe(
-                recording_id, "invalid", 0, "", "未找到 ffprobe"
+                recording_id, "invalid", 0, "", tr("未找到 ffprobe")
             )
             return
         if not media_files(session_dir):
             self.database.update_recording_probe(
-                recording_id, "invalid", 0, "", "录制目录中没有媒体文件"
+                recording_id, "invalid", 0, "", tr("录制目录中没有媒体文件")
             )
             return
         worker = ProbeWorker(recording_id, self.ffprobe_path, session_dir)

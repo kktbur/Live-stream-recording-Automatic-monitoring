@@ -23,6 +23,8 @@ jobs:
       QT_QPA_PLATFORM: offscreen
       FFMPEG_ARCHIVE_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-28-17-08/ffmpeg-n9.0.1-11-ge47273f4d9-win64-lgpl-shared-9.0.zip
       FFMPEG_ARCHIVE_SHA256: 9076e7ae97240a704a3c59d26401986ae29c7914a62213ec8c911aa8d0b06356
+      NODE_ARCHIVE_URL: https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip
+      NODE_ARCHIVE_SHA256: 6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba
 
     steps:
       - name: Check out source
@@ -66,6 +68,21 @@ jobs:
           $runtimeDir = Resolve-Path "runtime/ffmpeg"
           Copy-Item -Path (Join-Path $ffmpeg.DirectoryName "*") -Destination $runtimeDir -Force
 
+      - name: Prepare verified Node.js runtime
+        shell: pwsh
+        run: |
+          $archivePath = Join-Path $env:RUNNER_TEMP "node-runtime.zip"
+          $extractPath = Join-Path $env:RUNNER_TEMP "node-runtime"
+          Invoke-WebRequest -Uri $env:NODE_ARCHIVE_URL -OutFile $archivePath
+          $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:NODE_ARCHIVE_SHA256) {
+            throw "Node.js archive SHA-256 mismatch: $actualHash"
+          }
+          Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath
+          New-Item -ItemType Directory -Force -Path "runtime/node" | Out-Null
+          Copy-Item -LiteralPath (Join-Path $extractPath "node-v24.20.0-win-x64/node.exe") -Destination "runtime/node/node.exe"
+          Copy-Item -LiteralPath (Join-Path $extractPath "node-v24.20.0-win-x64/LICENSE") -Destination "runtime/node/LICENSE.txt"
+
       - name: Check first-party source
         shell: pwsh
         run: ./.venv/Scripts/python.exe -m ruff check src tests tools
@@ -106,3 +123,23 @@ jobs:
           if ($conflicts) {
             throw "Conflicting root runtime DLLs were packaged: $($conflicts.Name -join ', ')"
           }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build ten-language installer and checksum
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File packaging/build_installer.ps1
+          $installer = Resolve-Path "dist/installer/RecoBox-Setup-0.2.0.exe"
+          $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  RecoBox-Setup-0.2.0.exe" | Set-Content -Encoding ascii "$installer.sha256.txt"
+
+      - name: Upload installer test artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: RecoBox-Setup-0.2.0
+          path: |
+            dist/installer/RecoBox-Setup-0.2.0.exe
+            dist/installer/RecoBox-Setup-0.2.0.exe.sha256.txt

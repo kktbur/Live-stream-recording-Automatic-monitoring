@@ -10,6 +10,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication
 
+from .localization import LocalizationController
 from .monitor import MonitoringCoordinator
 from .preview import PreviewController
 from .recording import RecordingManager
@@ -55,7 +56,10 @@ def main() -> int:
     if icon.exists():
         app.setWindowIcon(QIcon(str(icon)))
 
-    database = Database(data_directory() / "reco_box.db")
+    database_path = data_directory() / "reco_box.db"
+    existing_database = database_path.exists()
+    database = Database(database_path)
+    localization = LocalizationController(app, database, existing_database)
     rooms = RoomListModel(database)
     room_proxy = RoomFilterProxyModel(rooms)
     history = RecordingHistoryModel(database)
@@ -82,10 +86,12 @@ def main() -> int:
     engine.rootContext().setContextProperty("legacyImport", legacy_import)
     engine.rootContext().setContextProperty("monitorCoordinator", monitor)
     engine.rootContext().setContextProperty("previewController", preview)
+    engine.rootContext().setContextProperty("localizationController", localization)
     qml_path = package_resource("ui", "Main.qml")
     engine.load(QUrl.fromLocalFile(str(qml_path)))
     if not engine.rootObjects():
         return 1
+    localization.set_engine(engine)
     default_recording_dir = Path.home() / "Videos" / "Reco Box"
     tray = TrayController(
         app,
@@ -94,6 +100,7 @@ def main() -> int:
         recorder,
         icon,
         default_recording_dir,
+        localization,
     )
     app.setProperty("trayController", tray)
     app.setProperty("monitorCoordinator", monitor)

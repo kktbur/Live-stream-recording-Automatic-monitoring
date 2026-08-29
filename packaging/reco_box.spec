@@ -11,6 +11,7 @@ MULTIMEDIA_PLUGIN_DIR = PYSIDE_DIR / "plugins" / "multimedia"
 datas = [
     (str(PROJECT_DIR / "assets"), "assets"),
     (str(PROJECT_DIR / "src" / "reco_box" / "ui"), "reco_box/ui"),
+    (str(PROJECT_DIR / "src" / "reco_box" / "translations"), "reco_box/translations"),
     (str(UPSTREAM_DIR / "src"), "vendor/DouyinLiveRecorder/src"),
     (str(UPSTREAM_DIR / "LICENSE"), "vendor/DouyinLiveRecorder"),
 ]

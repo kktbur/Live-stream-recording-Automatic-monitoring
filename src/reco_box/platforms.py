@@ -13,6 +13,30 @@ HOST_RULES: tuple[tuple[tuple[str, ...], Platform], ...] = (
     (("youtube.com", "youtu.be"), Platform.YOUTUBE),
     (("taobao.com", "m.tb.cn", "tb.cn"), Platform.TAOBAO),
     (("jd.com", "3.cn"), Platform.JD),
+    (("twitch.tv",), Platform.TWITCH),
+    (("sooplive.com",), Platform.SOOP),
+    (("chzzk.naver.com",), Platform.CHZZK),
+    (("twitcasting.tv",), Platform.TWITCASTING),
+    (("showroom-live.com",), Platform.SHOWROOM),
+    (("bigo.tv",), Platform.BIGO),
+    (("17.live",), Platform.LIVE17),
+    (("liveme.com",), Platform.LIVEME),
+    (("picarto.tv",), Platform.PICARTO),
+    (("shp.ee",), Platform.SHOPEE),
+    (
+        (
+            "live.shopee.sg",
+            "live.shopee.com.my",
+            "live.shopee.co.th",
+            "live.shopee.ph",
+            "live.shopee.vn",
+            "live.shopee.co.id",
+            "live.shopee.com.br",
+            "live.shopee.com.mx",
+            "live.shopee.tw",
+        ),
+        Platform.SHOPEE,
+    ),
 )
 
 
