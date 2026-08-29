@@ -1,0 +1,35 @@
+.venv/
+artifacts/
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local runtime data and secrets
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.bak
+.env
+.env.*
+config.ini
+URL_config.ini
+cookies*.json
+credentials*.json
+self-check.json
+self-check-progress.json
+*-self-test-data/
+
+# Bundled executables are release inputs, not source history
+runtime/ffmpeg/*.exe
+runtime/ffmpeg/*.dll
+
+# Editors / OS
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini

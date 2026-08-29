@@ -1,0 +1,212 @@
+from __future__ import annotations
+
+import importlib
+import os
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from types import ModuleType
+from typing import Any
+
+from platformdirs import user_data_path
+
+from .domain import Platform
+from .platforms import detect_platform
+from .resources import upstream_resource
+
+
+class UnsupportedPlatformError(ValueError):
+    pass
+
+
+class AnonymousAccessUnavailableError(RuntimeError):
+    pass
+
+
+QUALITY_CODES = {
+    "原画": "OD",
+    "蓝光": "BD",
+    "超清": "UHD",
+    "高清": "HD",
+    "标清": "SD",
+    "流畅": "LD",
+}
+
+
+@dataclass(slots=True, frozen=True)
+class ResolvedStream:
+    platform: Platform
+    is_live: bool
+    streamer_name: str
+    title: str
+    stream_urls: tuple[str, ...]
+    headers: str = ""
+
+
+def default_upstream_path() -> Path:
+    return upstream_resource()
+
+
+def default_upstream_runtime_path() -> Path:
+    override = os.environ.get("RECO_BOX_UPSTREAM_RUNTIME_DIR", "").strip()
+    if override:
+        return Path(override)
+    data_override = os.environ.get("RECO_BOX_DATA_DIR", "").strip()
+    if data_override:
+        return Path(data_override) / "upstream-runtime"
+    return Path(user_data_path("Reco Box", "Reco Box")) / "upstream-runtime"
+
+
+class DouyinLiveRecorderResolver:
+    """Thin anonymous-only adapter around the pinned v4.0.7 resolver functions."""
+
+    def __init__(
+        self,
+        spider_module: ModuleType | None = None,
+        stream_module: ModuleType | None = None,
+        upstream_path: Path | None = None,
+        runtime_path: Path | None = None,
+    ):
+        self._spider = spider_module
+        self._stream = stream_module
+        self.upstream_path = Path(upstream_path or default_upstream_path())
+        self.runtime_path = Path(runtime_path or default_upstream_runtime_path())
+
+    def _load_spider(self) -> ModuleType:
+        if self._spider is not None:
+            return self._spider
+        if not (self.upstream_path / "src" / "spider.py").exists():
+            raise RuntimeError(f"找不到已锁定的解析源码：{self.upstream_path}")
+        upstream = str(self.upstream_path)
+        if upstream not in sys.path:
+            sys.path.insert(0, upstream)
+        self.runtime_path.mkdir(parents=True, exist_ok=True)
+        original_argv0 = sys.argv[0]
+        original_stderr = sys.stderr
+        null_stderr = None
+        try:
+            # v4.0.7 derives its log directory from argv[0]. Redirect that legacy
+            # behavior away from Program Files and into Reco Box application data.
+            sys.argv[0] = str(self.runtime_path / "reco-box-runtime.exe")
+            # A PyInstaller windowed executable has no console and therefore no
+            # sys.stderr. The upstream logger requires a writable sink while it
+            # is imported; Reco Box removes every upstream sink immediately after.
+            if sys.stderr is None:
+                null_stderr = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+                sys.stderr = null_stderr
+            self._spider = importlib.import_module("src.spider")
+            upstream_logger = importlib.import_module("src.logger").logger
+            # The upstream INFO sink writes full transient play URLs. Reco Box
+            # disables those sinks so sensitive stream URLs never enter logs.
+            upstream_logger.remove()
+        finally:
+            sys.argv[0] = original_argv0
+            sys.stderr = original_stderr
+            if null_stderr is not None:
+                null_stderr.close()
+        return self._spider
+
+    def _load_stream(self) -> ModuleType:
+        self._load_spider()
+        if self._stream is None:
+            self._stream = importlib.import_module("src.stream")
+        return self._stream
+
+    async def resolve(self, url: str, proxy: str = "", quality: str = "原画") -> ResolvedStream:
+        platform = detect_platform(url)
+        if platform is Platform.UNKNOWN:
+            raise UnsupportedPlatformError("暂不支持该直播间链接")
+        spider = self._load_spider()
+        proxy_addr = proxy.strip() or None
+        quality_code = QUALITY_CODES.get(quality, "OD")
+
+        if platform is Platform.DOUYIN:
+            raw = await spider.get_douyin_stream_data(url, proxy_addr=proxy_addr, cookies=None)
+            payload = await self._load_stream().get_douyin_stream_url(
+                raw, quality_code, proxy_addr
+            )
+        elif platform is Platform.KUAISHOU:
+            raw = await spider.get_kuaishou_stream_data(url, proxy_addr=proxy_addr, cookies=None)
+            payload = await self._load_stream().get_kuaishou_stream_url(raw, quality_code)
+        elif platform is Platform.TIKTOK:
+            raw = await spider.get_tiktok_stream_data(url, proxy_addr=proxy_addr, cookies=None)
+            payload = await self._load_stream().get_tiktok_stream_url(
+                raw, quality_code, proxy_addr
+            )
+        elif platform is Platform.BILIBILI:
+            raw = await spider.get_bilibili_room_info(url, proxy_addr=proxy_addr, cookies=None)
+            payload = await self._load_stream().get_bilibili_stream_url(
+                raw, quality_code, proxy_addr, None
+            )
+        elif platform is Platform.YOUTUBE:
+            raw = await spider.get_youtube_stream_url(url, proxy_addr=proxy_addr, cookies=None)
+            payload = await self._load_stream().get_stream_url(raw, quality_code, spec=True)
+        elif platform is Platform.TAOBAO:
+            raise AnonymousAccessUnavailableError(
+                "当前锁定版淘宝解析器要求登录会话，Reco Box 不导入账号或 Cookie，"
+                "因此暂不尝试绕过；后续需要实现匿名公开接口后才能启用。"
+            )
+        else:
+            function_names = {
+                Platform.XIAOHONGSHU: "get_xhs_stream_url",
+                Platform.JD: "get_jd_stream_url",
+            }
+            function = getattr(spider, function_names[platform])
+            payload = await function(url, proxy_addr=proxy_addr, cookies=None)
+        return normalize_payload(platform, payload)
+
+
+def normalize_payload(platform: Platform, payload: Any) -> ResolvedStream:
+    if isinstance(payload, str):
+        urls = (payload,) if payload.startswith(("http://", "https://")) else ()
+        return ResolvedStream(platform, bool(urls), "待识别主播", "", urls)
+    if not isinstance(payload, dict):
+        return ResolvedStream(platform, False, "待识别主播", "", ())
+
+    urls = tuple(dict.fromkeys(_preferred_stream_urls(payload)))
+    live_flags = (
+        payload.get("is_live"),
+        payload.get("live_status"),
+        payload.get("status"),
+    )
+    explicit = next((flag for flag in live_flags if isinstance(flag, bool)), None)
+    is_live = explicit if explicit is not None else bool(urls)
+    name = _first_text(payload, "anchor_name", "user_name", "nickname", "name")
+    title = _first_text(payload, "title", "room_title", "live_title")
+    headers = _first_text(payload, "headers")
+    return ResolvedStream(platform, is_live, name or "待识别主播", title, urls, headers)
+
+
+def _first_text(payload: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _collect_stream_urls(value: Any, key_hint: str = "") -> list[str]:
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            found.extend(_collect_stream_urls(child, str(key).lower()))
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            found.extend(_collect_stream_urls(child, key_hint))
+    elif isinstance(value, str) and value.startswith(("http://", "https://")):
+        stream_hint = any(token in key_hint for token in ("flv", "m3u8", "play", "stream", "url"))
+        media_hint = any(token in value.lower() for token in (".flv", ".m3u8", "live"))
+        if stream_hint and media_hint:
+            found.append(value)
+    return found
+
+
+def _preferred_stream_urls(payload: dict[str, Any]) -> list[str]:
+    found: list[str] = []
+    for key in ("record_url", "flv_url", "m3u8_url"):
+        found.extend(_collect_stream_urls(payload.get(key), key))
+    if found:
+        return found
+    for key in ("play_url_list", "streams", "stream_urls"):
+        found.extend(_collect_stream_urls(payload.get(key), key))
+    return found
