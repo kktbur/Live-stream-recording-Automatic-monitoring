@@ -128,6 +128,27 @@ jobs:
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
+      - name: Prepare pinned Inno Setup language files
+        shell: pwsh
+        run: |
+          $commit = "484a38a681f41ced5f8f0eb9890f7932ca6a244c"
+          $languageDir = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6/Languages"
+          $files = @{
+            "ChineseSimplified.isl" = "Unofficial/ChineseSimplified.isl"
+            "ChineseTraditional.isl" = "Unofficial/ChineseTraditional.isl"
+            "Spanish.isl" = "Spanish.isl"
+            "French.isl" = "French.isl"
+            "German.isl" = "German.isl"
+            "Portuguese.isl" = "Portuguese.isl"
+            "Russian.isl" = "Russian.isl"
+            "Japanese.isl" = "Japanese.isl"
+            "Korean.isl" = "Korean.isl"
+          }
+          foreach ($entry in $files.GetEnumerator()) {
+            $url = "https://raw.githubusercontent.com/jrsoftware/issrc/$commit/Files/Languages/$($entry.Value)"
+            Invoke-WebRequest -Uri $url -OutFile (Join-Path $languageDir $entry.Key)
+          }
+
       - name: Build ten-language installer and checksum
         shell: pwsh
         run: |
