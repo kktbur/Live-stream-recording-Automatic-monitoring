@@ -39,3 +39,18 @@ platform tokens, recordings and user configuration.
   `00CD2D11F6ED84C6D5B91C0E06DD3DA24F742C43907DE1E88AA65C7C15920219`.
 - The application is an early Windows beta and platform-side changes can break
   anonymous stream resolution without notice.
+
+## Resolver provenance and transport note
+
+- The version-controlled `vendor/DouyinLiveRecorder/LICENSE` and `src/` files
+  (20 files total) were compared file by file using Git Blob SHA against the
+  official annotated `v4.0.7` tag, commit
+  `fec734ae74aabef862996177a78c3e8cc1dcc7ee`; differences: 0. Audit date:
+  2026-08-29.
+- The resolver's main asynchronous requests currently pass `verify=False` by
+  default in `src/http_clients/async_http.py`. The unused `ssl_context` objects
+  in `spider.py` and `sync_http.py` are not the effective call path. This is an
+  inherited compatibility risk and is disclosed in `README.md` and `PRIVACY.md`.
+- The source logo retained an Adobe XMP metadata block in the 0.1.3 release;
+  it contains editing timestamps and document identifiers but no user path or
+  account identifier. The 0.1.4 source asset removes that unnecessary metadata.

@@ -1,5 +1,5 @@
 #define MyAppName "Reco Box"
-#define MyAppVersion "0.1.3"
+#define MyAppVersion "0.1.4"
 #define MyAppPublisher "Reco Box"
 #define MyAppExeName "RecoBox.exe"
 
@@ -35,6 +35,7 @@ Source: "..\dist\Reco Box\*"; DestDir: "{app}"; Flags: ignoreversion recursesubd
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PRIVACY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\OPEN_SOURCE_AUDIT.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

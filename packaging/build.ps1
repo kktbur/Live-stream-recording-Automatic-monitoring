@@ -39,6 +39,33 @@ if (-not (Test-Path -LiteralPath $ExePath)) {
     throw "Packaged executable was not created: $ExePath"
 }
 
+# Keep Windows/Qt runtime resolution deterministic.  PyInstaller can collect
+# ICU, API-MS, UCRT and MSVC compatibility DLLs from the build environment at
+# the application root.  Those files can override the ABI-matched copies
+# shipped under PySide6 and make Qt6Core.dll fail with a missing ICU symbol
+# (for example UCNV_TO_U_CALLBACK_SUBSTITUTE).  The known-good distribution
+# keeps the PySide6 copies in their own directory and retains only the app's
+# normal VCRUNTIME files at the root.
+$InternalDir = Join-Path $DistDir "Reco Box\_internal"
+$ConflictingRuntimePatterns = @(
+    "icu*.dll",
+    "api-ms-win-*.dll",
+    "ucrtbase.dll",
+    "MSVCP140*.dll"
+)
+$RemovedRuntimeFiles = foreach ($Pattern in $ConflictingRuntimePatterns) {
+    Get-ChildItem -LiteralPath $InternalDir -File -Filter $Pattern -ErrorAction SilentlyContinue |
+        Where-Object { $_.DirectoryName -eq $InternalDir } |
+        ForEach-Object {
+            $RemovedName = $_.Name
+            Remove-Item -LiteralPath $_.FullName -Force
+            $RemovedName
+        }
+}
+if ($RemovedRuntimeFiles) {
+    Write-Output ("Removed conflicting root runtime DLLs: " + ($RemovedRuntimeFiles -join ", "))
+}
+
 # Keep the recorder FFmpeg runtime outside PyInstaller dependency analysis.
 # Qt Multimedia ships a different ABI-matched FFmpeg set; analyzing both sets
 # together can copy unrelated system DLLs into the application root.

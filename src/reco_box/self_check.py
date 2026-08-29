@@ -43,7 +43,8 @@ def run_self_check(data_dir: Path) -> int:
     check_file("resolver_source", upstream_resource() / "src" / "spider.py")
 
     node = shutil.which("node")
-    checks["node"] = {"ok": bool(node), "path": node or ""}
+    # Node.js is optional for the currently exposed platform paths.
+    checks["node"] = {"ok": bool(node), "required": False, "path": node or ""}
     write_progress("resolver_import_started")
 
     try:
@@ -54,7 +55,11 @@ def run_self_check(data_dir: Path) -> int:
 
     write_progress("resolver_import_finished")
 
-    passed = all(bool(item["ok"]) for item in checks.values())
+    passed = all(
+        bool(item["ok"])
+        for item in checks.values()
+        if item.get("required", True)
+    )
     payload = {
         "checked_at": datetime.now(UTC).isoformat(),
         "passed": passed,

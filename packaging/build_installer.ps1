@@ -22,7 +22,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup failed with exit code $LASTEXITCODE"
 }
 
-$SetupExe = Join-Path $ProjectDir "dist\installer\RecoBox-Setup-0.1.3.exe"
+$SetupExe = Join-Path $ProjectDir "dist\installer\RecoBox-Setup-0.1.4.exe"
 if (-not (Test-Path -LiteralPath $SetupExe)) {
     throw "Installer was not created: $SetupExe"
 }

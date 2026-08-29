@@ -58,7 +58,9 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # Keep the unsigned Windows build conservative: UPX can increase
+    # antivirus false positives and provides little value for this bundle.
+    upx=False,
     console=False,
     icon=str(PROJECT_DIR / "assets" / "reco-box.ico"),
 )
@@ -68,7 +70,7 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name="Reco Box",
 )
