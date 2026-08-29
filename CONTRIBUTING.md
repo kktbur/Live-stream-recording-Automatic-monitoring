@@ -34,7 +34,8 @@
 1. Fork 仓库并从最新 `main` 创建一个范围明确的分支。
 2. 一个 PR 只解决一个问题，避免同时重构无关模块。
 3. 为行为变化增加或更新测试。
-4. 本地运行：
+4. 按 README 的构建说明准备经过校验的 FFmpeg 运行时。完整测试会真实调用 `runtime/ffmpeg/ffmpeg.exe` 和 `ffprobe.exe`；缺少这些本地二进制时，预览解码和自检测试会按预期失败。
+5. 本地运行：
 
    ```powershell
    ./.venv/Scripts/python.exe -m ruff check src tests tools
@@ -42,7 +43,7 @@
    ./.venv/Scripts/python.exe -m pytest tests -q -p no:cacheprovider
    ```
 
-5. 在 PR 描述中写明问题、实现方式、验证结果和已知限制；UI 变化请附截图。
+6. 在 PR 描述中写明问题、实现方式、验证结果和已知限制；UI 变化请附截图。
 
 不要在 PR 中提交构建产物、数据库、日志、Cookie、录制文件或 FFmpeg 二进制。`vendor/DouyinLiveRecorder/` 应保持与记录的上游版本一致；同步上游或应用必要补丁时，请单独提交并记录来源、版本、许可证和差异。
 

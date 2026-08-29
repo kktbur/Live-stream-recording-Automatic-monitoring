@@ -56,6 +56,8 @@ py -3.12 -m venv .venv
 
 运行测试：
 
+完整测试会真实调用 FFmpeg。请先按下方构建说明，把经过校验的 FFmpeg 运行时放入 `runtime/ffmpeg/`；二进制缺失时，预览解码和核心自检测试会失败。
+
 ```powershell
 $env:QT_QPA_PLATFORM='offscreen'
 ./.venv/Scripts/python.exe -m pytest tests -q -p no:cacheprovider

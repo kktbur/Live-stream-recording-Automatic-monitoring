@@ -21,6 +21,8 @@ jobs:
 
     env:
       QT_QPA_PLATFORM: offscreen
+      FFMPEG_ARCHIVE_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n9.0-latest-win64-lgpl-shared-9.0.zip
+      FFMPEG_ARCHIVE_SHA256: 939f64da0f77a21837a17928afcf25a32280e16269fe0732bbfbe2d2bbc83086
 
     steps:
       - name: Check out source
@@ -42,6 +44,28 @@ jobs:
           ./.venv/Scripts/python.exe -m pip install --upgrade pip
           ./.venv/Scripts/python.exe -m pip install --editable ".[dev]"
 
+      - name: Prepare verified FFmpeg runtime
+        shell: pwsh
+        run: |
+          $archivePath = Join-Path $env:RUNNER_TEMP "ffmpeg-runtime.zip"
+          $extractPath = Join-Path $env:RUNNER_TEMP "ffmpeg-runtime"
+          Invoke-WebRequest -Uri $env:FFMPEG_ARCHIVE_URL -OutFile $archivePath
+
+          $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:FFMPEG_ARCHIVE_SHA256) {
+            throw "FFmpeg archive SHA-256 mismatch: $actualHash"
+          }
+
+          Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath
+          $ffmpeg = Get-ChildItem -LiteralPath $extractPath -Recurse -Filter "ffmpeg.exe" |
+            Select-Object -First 1
+          if (-not $ffmpeg) {
+            throw "Verified archive did not contain ffmpeg.exe"
+          }
+
+          $runtimeDir = Resolve-Path "runtime/ffmpeg"
+          Copy-Item -Path (Join-Path $ffmpeg.DirectoryName "*") -Destination $runtimeDir -Force
+
       - name: Check first-party source
         shell: pwsh
         run: ./.venv/Scripts/python.exe -m ruff check src tests tools
@@ -49,16 +73,6 @@ jobs:
       - name: Run tests
         shell: pwsh
         run: ./.venv/Scripts/python.exe -m pytest tests -q -p no:cacheprovider
-
-      - name: Prepare packaging-only FFmpeg path fixtures
-        shell: pwsh
-        run: |
-          # Release builds must provide the verified LGPL FFmpeg runtime described
-          # in README.md. CI uses valid local Windows executables only to verify
-          # that PyInstaller includes and resolves the expected runtime paths.
-          $runtimeDir = "runtime/ffmpeg"
-          Copy-Item "$env:SystemRoot/System32/where.exe" "$runtimeDir/ffmpeg.exe"
-          Copy-Item "$env:SystemRoot/System32/where.exe" "$runtimeDir/ffprobe.exe"
 
       - name: Build Windows application
         shell: pwsh
