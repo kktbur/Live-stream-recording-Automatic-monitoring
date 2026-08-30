@@ -93,6 +93,25 @@ def test_taobao_reports_anonymous_access_limit_without_calling_upstream() -> Non
         asyncio.run(resolver.resolve("https://m.tb.cn/example"))
 
 
+def test_twitcasting_forwards_anonymous_viewer_headers_to_ffmpeg() -> None:
+    async def async_req(url, proxy_addr=None, headers=None):
+        if "streamserver.php" in url:
+            return '{"tc-hls":{"streams":{"high":"https://cdn.example/live.m3u8"}}}'
+        return (
+            '<title>Demo (@demo) TwitCasting</title>'
+            '<div data-is-onlive="true" data-movie-id="123"></div>'
+        )
+
+    resolver = DouyinLiveRecorderResolver(
+        spider_module=SimpleNamespace(async_req=async_req)
+    )
+    result = asyncio.run(resolver.resolve("https://twitcasting.tv/demo"))
+
+    assert result.stream_urls == ("https://cdn.example/live.m3u8",)
+    assert "Referer: https://twitcasting.tv/\r\n" in result.headers
+    assert result.headers.endswith("\r\n")
+
+
 @pytest.mark.parametrize(
     ("url", "platform", "function_name"),
     [

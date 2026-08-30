@@ -205,6 +205,7 @@ class DouyinLiveRecorderResolver:
         result: dict[str, Any] = {
             "anchor_name": f"{anchor.group(1).strip()}-{anchor.group(2)}-{movie_id.group(1)}",
             "is_live": status.group(1) == "true",
+            "headers": _ffmpeg_headers(headers),
         }
         if not result["is_live"]:
             return result
@@ -228,6 +229,10 @@ class DouyinLiveRecorderResolver:
         return result
 
 
+def _ffmpeg_headers(headers: dict[str, str]) -> str:
+    return "".join(f"{key}: {value}\r\n" for key, value in headers.items())
+
+
 def normalize_payload(platform: Platform, payload: Any) -> ResolvedStream:
     if isinstance(payload, str):
         urls = (payload,) if payload.startswith(("http://", "https://")) else ()
@@ -245,7 +250,8 @@ def normalize_payload(platform: Platform, payload: Any) -> ResolvedStream:
     is_live = explicit if explicit is not None else bool(urls)
     name = _first_text(payload, "anchor_name", "user_name", "nickname", "name")
     title = _first_text(payload, "title", "room_title", "live_title")
-    headers = _first_text(payload, "headers")
+    header_value = payload.get("headers")
+    headers = header_value if isinstance(header_value, str) else ""
     return ResolvedStream(platform, is_live, name or "待识别主播", title, urls, headers)
 
 
