@@ -131,7 +131,7 @@ jobs:
       - name: Prepare pinned Inno Setup language files
         shell: pwsh
         run: |
-          $commit = "484a38a681f41ced5f8f0eb9890f7932ca6a244c"
+          $commit = "cfdf48923178df4b4f040e038b423aa555a61ffc"
           $languageDir = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6/Languages"
           $files = @{
             "ChineseSimplified.isl" = "Unofficial/ChineseSimplified.isl"
