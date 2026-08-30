@@ -17,8 +17,8 @@
 ## 结果概览
 
 > 后续实际录制复核见 `platform-validation-0.2.0.md`。调查时的“已确认”只代表
-> 官方页面/API 当时显示正在直播；其中 BIGO 样本在执行解析时已经下播，SHOWROOM
-> 虽能解析到 HLS，但 FFmpeg 收到 CDN HTTP 403，因此两者都没有通过发布门槛。
+> 官方页面/API 当时显示正在直播。之后又找到了 BIGO LIVE、LiveMe 和 Shopee Live
+> 的当前公开样本；是否真正通过仍以解析、短时录制和 MP4 封装结果为准。
 
 | 平台 | 分类 | 建议测试地址 | 2026-08-30 一手证据 | 匿名访问边界 |
 | --- | --- | --- | --- | --- |
@@ -27,11 +27,11 @@
 | CHZZK | 已确认 | <https://chzzk.naver.com/live/c93cdb99760bc66b6f7f4462d95307ee> | 官方接口 [`/service/v1/lives?size=20`](https://api.chzzk.naver.com/service/v1/lives?size=20) 返回该频道 `status` 对应的直播列表数据、`adult:false`、频道名“올환”，并显示从 2026-08-27 持续开播的 24 小时直播 | 样本不是成人内容；仍可能因韩国境外 CDN/地区策略影响实际播放 |
 | TwitCasting | 已确认 | <https://twitcasting.tv/TAXFRAUDALGDLY> | 官方英文首页 <https://en.twitcasting.tv/?r=home> 在调查时将该固定频道列为正在直播的 `24/7 DEEP STATIK LABS RADIO`；官方帮助明确说明观看直播无需注册/登录 | 只适用于公开直播；密码、群组、付费或 `login=true` 房间不得尝试登录 |
 | SHOWROOM | 已确认 | <https://www.showroom-live.com/1126midorin> | 官方接口 [`/api/live/onlives`](https://www.showroom-live.com/api/live/onlives) 返回 `room_url_key:1126midorin`、`room_id:569829`、直播标题及公开 HLS 项 | 日本境外访问可能受网络/CDN 影响；样本本身未显示登录或年龄要求 |
-| BIGO LIVE | 已确认 | <https://www.bigo.tv/id/ap_ap> | 官方房间页在调查前一日被官方站点索引为直播页，页面显示主播正在 PK；BIGO 官方指南说明观看官网公开直播不要求登录，登录仅用于聊天、关注等功能 | 可能存在国家/地区分发差异；成人或私密房间不在测试范围 |
+| BIGO LIVE | 已通过 | <https://www.bigo.tv/id/695645820> | 当前公开房间完成匿名解析、20 秒 TS 录制和 MP4 封装；详情见实际验证报告 | 可能存在国家/地区分发差异；成人或私密房间不在测试范围 |
 | 17LIVE | 无法确认 | 无合格样本 | 官方首页 <https://17.live/> 在未登录状态强制要求填写生日，并明确说明服务仅供 18 岁以上用户；没有取得不经过该年龄确认的固定公开房间样本 | 发布计划禁止通过年龄确认或访问控制，因此当前不能执行合格的匿名发布验证 |
-| LiveMe | 无法确认 | 无合格样本 | 官方首页 <https://www.liveme.com/> 显示 “Hot Live/Trending” 直播内容，但当前页面未向匿名 HTML 暴露与上游解析器要求相符的固定 `/index.html` 房间 URL；官方用户页只能证明账号存在，不能证明当前直播 | 平台可能按地区返回不同推荐；不能用首页主播昵称猜造房间 ID |
+| LiveMe | 已通过 | <https://www.liveme.com/v/17880688621118196521/index.html> | 当前公开房间完成匿名解析、20 秒 TS 录制和 MP4 封装，并验证安装包内置 Node.js 运行时 | 平台可能按地区返回不同推荐；直播状态随时变化 |
 | Picarto | 已确认 | <https://www.picarto.tv/BooruGuru> | Picarto 官方公开接口 [`/api/v1/online`](https://api.picarto.tv/api/v1/online) 在调查时返回 `BooruGuru` 在线、69 名观众、`adult:false` 及公开缩略图；官方帮助也说明该接口用于获取所有在线频道 | 选用 `adult:false` 样本；私密或成人频道不在测试范围 |
-| Shopee Live | 无法确认 | 候选历史地址：<https://live.shopee.sg/share?from=live&session=953420&share_user_id=1500211007> | 该官方分享页存在，但当前返回 “Request failed”；另一个官方泰国站会话页也返回请求被拒绝。没有取得当前开播且能匿名返回 session 数据的固定地址 | 高度依赖区域站点、会话有效期和地区网络；不能把历史 session 当作当前直播样本 |
+| Shopee Live | 当前样本已确认，解析仍受阻 | 当前公开 Shopee SG/ID 会话 | 官方页面能确认正在直播并暴露可播放流，但锁定上游解析器的普通匿名请求被动态校验拒绝，不能算 Reco Box 通过 | 高度依赖区域站点、会话有效期和反滥用校验；0.2.0 保持 Beta |
 
 ## 已确认样本的建议优先级
 
@@ -41,12 +41,12 @@
 1. CHZZK：`https://chzzk.naver.com/live/c93cdb99760bc66b6f7f4462d95307ee`
 2. TwitCasting：`https://twitcasting.tv/TAXFRAUDALGDLY`
 3. SHOWROOM：`https://www.showroom-live.com/1126midorin`
-4. BIGO LIVE：`https://www.bigo.tv/id/ap_ap`
+4. BIGO LIVE：`https://www.bigo.tv/id/695645820`
 5. Picarto：`https://www.picarto.tv/BooruGuru`
 
 其中 CHZZK、SHOWROOM 和 Picarto 的一手响应明确给出了直播状态；SHOWROOM 的响应
-还直接包含 HLS 项。TwitCasting 与 BIGO LIVE 由平台官方直播页确认当前直播，但仍需要
-Reco Box 解析器实际返回流地址后，才算通过发布门槛。
+还直接包含 HLS 项。后续实际复核中 BIGO LIVE 已完成端到端通过，TwitCasting 仍为
+间歇性通过，SHOWROOM 则在录制阶段收到 CDN HTTP 403。
 
 ## 候选样本
 
@@ -71,33 +71,28 @@ Reco Box 解析器实际返回流地址后，才算通过发布门槛。
 ### 17LIVE
 
 官方 Web 入口要求匿名访问者先输入生日，并声明 18+。按照 0.2.0 的发布边界，不能替
-用户确认年龄，也不能写入浏览器年龄状态，因此没有合格的匿名测试地址。若坚持当前发布
-门槛，17LIVE 单独就足以阻止正式发布。
+用户确认年龄，也不能写入浏览器年龄状态，因此没有合格的匿名测试地址。0.2.0 将其保留
+为 Beta，并明确未通过真实录制验证。
 
 ### LiveMe
 
-官方首页能证明平台存在正在直播的推荐内容，但没有向当前匿名 HTML 提供上游函数所需
-的固定直播 ID。搜索结果中的用户主页（`/u/<id>/index.html`）是账号主页，不等同于直播
-房间，不能拿来伪造已验证结果。
+后续找到固定 `/v/<id>/index.html` 公开直播地址，并使用安装包内置 Node.js 运行时完成
+匿名解析、20 秒 TS 录制、停止和 MP4 封装。该次测试通过，但房间状态和推荐地址仍具
+时效性。
 
 ### Shopee Live
 
-官方分享链接的 `session` 是短期、区域化标识。本次找到的新加坡和泰国官方会话页均拒
-绝请求或返回失败，无法确认直播状态、主播名和流地址。继续测试需要在相应区域的 Shopee
-App 中由主播主动分享一条当时正在直播的公开链接；不能依赖搜索引擎中的历史 session。
+后续取得了当时正在直播的 Shopee SG 分享链接，并从官方印尼页面确认多条 `status:1`
+会话及可播放流。可是 Shopee 网页客户端依赖动态请求校验和区域分发，锁定上游解析器的
+普通匿名请求仍会被拒绝。0.2.0 不逆向或绕过这套保护，也不把网页端临时签名流地址提交
+进 Git，因此只保留 Beta 标记并明确可能解析失败。
 
 ## 对 0.2.0 发布门槛的结论
 
-本次调查提供了 5 个“已确认”样本、2 个“候选”样本和 3 个“无法确认”平台。它可以
-用于继续执行实际解析和短时 TS 录制，但尚未形成十个平台全部通过的证据链。
-
-因此，在以下事项完成前，不应把十个平台全部标记为“已通过真实验证”，也不应仅凭这些
-地址解除 `v0.2.0` Release 的平台门槛：
-
-1. 对 5 个已确认样本重新刷新状态并完成解析、短时 TS 录制、停止和 MP4 封装。
-2. 为 Twitch 与 SOOP Global 取得同一时刻的官方开播证据和解析结果。
-3. 决定 17LIVE 的强制年龄确认是否意味着应从 0.2.0 支持范围移除，而不是绕过它。
-4. 从 LiveMe 和 Shopee Live 官方客户端取得当时有效、公开、无需登录的分享地址。
+后续真实测试已使 BIGO LIVE 和 LiveMe 完成端到端通过，也确认了 Shopee Live 的当前
+公开会话与技术阻塞。用户批准 0.2.0 不再以十个平台全部通过为前提：所有新增海外平台
+继续统一显示为 Beta，各自的通过、间歇性或阻塞状态在
+`platform-validation-0.2.0.md` 中如实披露。发布说明不得把 Shopee Live 描述为稳定支持。
 
 ## 一手来源
 
@@ -107,13 +102,13 @@ App 中由主播主动分享一条当时正在直播的公开链接；不能依�
 - TwitCasting 官方首页：<https://en.twitcasting.tv/?r=home>
 - TwitCasting 官方观看帮助：<https://twitcasting.tv/helpcenter.php?pid=INDEX_HELP_VIEWER>
 - SHOWROOM 官方在线列表：<https://www.showroom-live.com/api/live/onlives>
-- BIGO LIVE 官方房间：<https://www.bigo.tv/id/ap_ap>
+- BIGO LIVE 官方房间：<https://www.bigo.tv/id/695645820>
 - BIGO LIVE 官方 PC 观看指南：<https://www.bigo.tv/blog/bigo-live-pc>
 - 17LIVE 官方首页：<https://17.live/>
-- LiveMe 官方首页：<https://www.liveme.com/>
+- LiveMe 官方房间：<https://www.liveme.com/v/17880688621118196521/index.html>
 - Picarto 官方在线列表：<https://api.picarto.tv/api/v1/online>
 - Picarto 官方 API 帮助：<https://help.picarto.tv/help/how-do-i-access-information-about-users/>
-- Shopee Live 新加坡官方分享页：
-  <https://live.shopee.sg/share?from=live&session=953420&share_user_id=1500211007>
+- Shopee Live 新加坡官方分享页（调查时有效）：
+  <https://live.shopee.sg/share?from=live&session=1541377&share_user_id=30447702>
 - 锁定上游源码：
   <https://github.com/ihmily/DouyinLiveRecorder/blob/v4.0.7/src/spider.py>

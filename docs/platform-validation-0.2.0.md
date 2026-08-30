@@ -2,56 +2,64 @@
 
 Validation date: 2026-08-30 (Asia/Shanghai)
 
-## Automated validation completed
+## Validation boundary
 
-- Exact-domain detection and disguised-domain rejection for all ten new platforms.
-- Anonymous resolver routing for the pinned upstream functions.
-- Explicit anonymous-only boundary for SOOP Global and TwitCasting.
-- Stable normalized stream result handling and proxy forwarding.
-- FFmpeg proxy forwarding and bundled Node.js self-check.
-- Existing-platform regression suite: 66 tests passed after the live-test fixes.
+- Only public rooms were tested. No platform account, Cookie, password, age
+  confirmation, or access-control bypass was used.
+- A full pass requires anonymous resolution, a short TS recording, a clean
+  FFmpeg stop, lossless MP4 remuxing, and a readable MP4 duration from ffprobe.
+- Transient signed playback URLs are not committed. Reports retain only the CDN
+  origin and non-sensitive recording measurements.
+- All ten overseas additions remain Beta in 0.2.0. A Beta label is not a claim
+  that every platform has passed a real-network recording test.
 
-## Real-network method
+## Automated checks
 
-The live checks used only public room URLs and did not use an account, Cookie,
-password, age confirmation, or access-control bypass. A platform only passes the
-recording column when Reco Box resolves a live URL, pinned FFmpeg records a short
-TS file, FFmpeg stops, the TS is remuxed to MP4, and ffprobe reads the MP4.
+- Exact-domain detection and disguised-domain rejection for all new platforms.
+- Anonymous resolver routing and normalized result handling.
+- Explicit anonymous-only boundaries for SOOP Global and TwitCasting.
+- Proxy forwarding to platform resolution and FFmpeg.
+- Bundled Node.js runtime and translation catalog self-checks.
+- Regression coverage for the original platforms and recording workflow.
 
-Transient signed play URLs are never written to this document or application
-logs. Local validation reports retain only the CDN origin.
+## Real-network results
 
-## Release-gate status
-
-| Platform | Public test URL | Anonymous live resolve | Short TS and MP4 | Result on 2026-08-30 |
+| Platform | Public sample | Anonymous resolve | Short TS and MP4 | Status on 2026-08-30 |
 | --- | --- | --- | --- | --- |
-| Twitch | `https://www.twitch.tv/gaules` | Live, 5 routes | Passed: 4.03 s MP4 | Passed at 10:13 CST; room state is time-sensitive |
-| SOOP Global | `https://www.sooplive.com/taenaatakpoker` | Failed before JSON parsing | Not run | Blocked: official/global API response was unavailable from this network |
-| CHZZK | `https://chzzk.naver.com/live/c93cdb99760bc66b6f7f4462d95307ee` | Live, 1 route | Passed: 4.02 s MP4 | Passed at 10:13 CST |
-| TwitCasting | `https://twitcasting.tv/TAXFRAUDALGDLY` | Live, 3 routes | Passed once: 5.20 s MP4; a repeat later timed out | Unstable; viewer headers were fixed, but repeated stop/record stability is not yet sufficient |
-| SHOWROOM | `https://www.showroom-live.com/r/1126midorin` | Live, 1 route | Failed | Blocked: CDN returned HTTP 403 to FFmpeg; resolver-only success is not counted |
-| BIGO LIVE | `https://www.bigo.tv/id/ap_ap` and `/id/pwxwb` | Both offline when tested | Not run | Blocked: no current public live sample remained available |
-| 17LIVE | `https://17.live/en/live/536903` | Offline sample resolved | Not run | Blocked: public web entry requires an 18+ birthday confirmation, outside the anonymous test boundary |
-| LiveMe | No valid fixed live-room URL | Upstream returned incomplete room data for the homepage | Not run | Blocked: official anonymous homepage did not expose the fixed live ID required by the pinned resolver |
-| Picarto | `https://www.picarto.tv/BooruGuru` | Live, 1 route | Passed: 4.04 s MP4 | Passed at 10:15 CST |
-| Shopee Live | historical Singapore session `953420` | Failed before JSON parsing | Not run | Blocked: session expired or was region-rejected; a historical session is not a live sample |
+| Twitch | `https://www.twitch.tv/gaules` | Live, 5 routes | Passed: 4.03 s MP4 | Passed; room state is time-sensitive |
+| SOOP Global | `https://www.sooplive.com/taenaatakpoker` | Failed before JSON parsing | Not run | Beta; official API unavailable from this network |
+| CHZZK | `https://chzzk.naver.com/live/c93cdb99760bc66b6f7f4462d95307ee` | Live, 1 route | Passed: 4.02 s MP4 | Passed |
+| TwitCasting | `https://twitcasting.tv/TAXFRAUDALGDLY` | Live, 3 routes | Passed once; repeat timed out | Beta; intermittent |
+| SHOWROOM | `https://www.showroom-live.com/r/1126midorin` | Live, 1 route | CDN returned HTTP 403 | Beta; resolver-only success is not a recording pass |
+| BIGO LIVE | `https://www.bigo.tv/id/695645820` | Live, 1 route | Passed: 20.07 s MP4 | Passed end to end |
+| 17LIVE | `https://17.live/en/live/536903` | Offline sample resolved | Not run | Beta; 18+ confirmation remains outside the anonymous boundary |
+| LiveMe | `https://www.liveme.com/v/17880688621118196521/index.html` | Live, 2 routes | Passed: 20.04 s MP4 | Passed end to end with the bundled Node.js runtime |
+| Picarto | `https://www.picarto.tv/BooruGuru` | Live, 1 route | Passed: 4.04 s MP4 | Passed |
+| Shopee Live | Current public Shopee SG/ID sessions were inspected | Official pages exposed live sessions, but the pinned resolver was rejected by dynamic platform checks | Not counted | Beta; anonymous parsing may fail because of regional and anti-abuse controls |
 
-## Accurate conclusion
+## Priority-platform evidence
 
-Three platforms passed the repeated end-to-end gate: Twitch, CHZZK, and Picarto.
-TwitCasting completed one end-to-end recording after forwarding anonymous viewer
-headers, but a later repetition timed out and therefore remains unstable. Six
-platforms remain blocked by platform/network behavior or the absence of a valid
-current public sample.
+The release decision specifically rechecked BIGO LIVE, LiveMe, and Shopee Live:
 
-The source, installer pipeline, translations, and offline tests are ready, but
-the agreed ten-platform live gate is not satisfied. Consequently, this state may
-be pushed to `main` as truthful validation progress, but it must not be published
-as a `v0.2.0` GitHub Release claiming that all ten new platforms are verified.
+- BIGO LIVE produced a 2,694,228-byte TS and a 2,527,417-byte MP4 with a
+  20.066667-second duration.
+- LiveMe produced a 4,832,164-byte TS and a 4,606,697-byte MP4 with a
+  20.036000-second duration on a machine using the bundled Node.js runtime.
+- Shopee Live had current public samples and playable streams, but Reco Box's
+  pinned anonymous resolver could not reliably obtain the session response.
+  Shopee's web client uses dynamic request validation and regional delivery.
+  Reimplementing that moving protection was intentionally excluded from 0.2.0.
 
-Before a release, refresh all public samples, repeat the unstable/blocked rows,
-rebuild the installer, rerun the packaged self-test, regenerate the SHA-256 file,
-and then publish both release assets.
+## 0.2.0 release decision
 
-The dated sample-discovery evidence and official-source links are recorded in
+The user-approved 0.2.0 boundary is to publish the completed internationalized
+application without claiming that Shopee Live is stable. BIGO LIVE and LiveMe
+are documented as real-network passes. Shopee Live and every other incomplete
+or intermittent overseas adapter remain visibly marked Beta.
+
+Future releases may improve Shopee compatibility using maintainable upstream or
+officially supported mechanisms. Reco Box will not add account login, Cookie
+import, or access-control bypass to make that platform appear supported.
+
+The dated source-discovery notes remain in
 [`platform-live-samples-0.2.0.md`](platform-live-samples-0.2.0.md).

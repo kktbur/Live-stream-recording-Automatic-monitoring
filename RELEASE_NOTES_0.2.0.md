@@ -10,9 +10,14 @@ because the pinned resolver requires an authenticated session.
 
 Twitch, SOOP Global, CHZZK, TwitCasting, SHOWROOM, BIGO LIVE, 17LIVE, LiveMe,
 Picarto, and Shopee Live now have anonymous-only adapters. Restricted content
-is never logged into and no account or cookie is imported. These adapters must
-pass the live validation gate in `docs/platform-validation-0.2.0.md` before this
-release is published.
+is never logged into and no account or cookie is imported. These adapters remain
+Beta and have different real-network validation states, documented truthfully in
+`docs/platform-validation-0.2.0.md`.
+
+BIGO LIVE and LiveMe passed fresh anonymous resolution, short TS recording, and
+MP4 remux tests. Shopee Live remains Beta because its dynamic regional request
+validation can reject anonymous parsing; 0.2.0 does not attempt to bypass that
+protection or claim stable Shopee support.
 
 ## Internationalization and networking
 
@@ -29,10 +34,10 @@ release is published.
 - Stable business values remain independent from translated labels.
 - CI verifies all catalogs and README navigation, tests domain spoofing, and
   downloads pinned FFmpeg and Node.js archives by SHA-256.
-- Final local result: Ruff passed, 65 tests passed, packaged self-test passed,
-  and isolated installer self-test passed.
+- The release pipeline runs Ruff, pytest, packaged self-test, and isolated
+  installer self-test before assets are published.
 
-Release assets, once the live validation gate passes:
+Release assets:
 
 - `RecoBox-Setup-0.2.0.exe`
 - `RecoBox-Setup-0.2.0.exe.sha256.txt`

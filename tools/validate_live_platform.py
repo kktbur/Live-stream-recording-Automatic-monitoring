@@ -36,9 +36,9 @@ def _safe_error_tail(value: str) -> str:
     return "\n".join(redacted.splitlines()[-8:])[-2000:]
 
 
-async def validate(url: str, seconds: int) -> dict[str, object]:
+async def validate(url: str, seconds: int, proxy: str = "") -> dict[str, object]:
     configure_bundled_runtime()
-    resolved = await DouyinLiveRecorderResolver().resolve(url)
+    resolved = await DouyinLiveRecorderResolver().resolve(url, proxy=proxy)
     report: dict[str, object] = {
         "tested_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "public_url": url,
@@ -86,6 +86,8 @@ async def validate(url: str, seconds: int) -> dict[str, object]:
     ]
     if resolved.headers:
         command.extend(["-headers", resolved.headers])
+    if proxy:
+        command.extend(["-http_proxy", proxy])
     command.extend(
         [
             "-i",
@@ -165,8 +167,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
     parser.add_argument("--seconds", type=int, default=8)
+    parser.add_argument("--proxy", default="")
     args = parser.parse_args()
-    report = asyncio.run(validate(args.url, max(3, min(args.seconds, 30))))
+    report = asyncio.run(validate(args.url, max(3, min(args.seconds, 30)), args.proxy))
     print(json.dumps(report, ensure_ascii=True))
     if not report["mp4_remuxed"]:
         raise SystemExit(1)
