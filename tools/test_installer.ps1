@@ -111,8 +111,23 @@ function Invoke-SilentInstaller {
     $process = Start-Process -FilePath $InstallerPath -ArgumentList $arguments -Wait -PassThru
     if ($process.ExitCode -ne 0) {
         $details = if (Test-Path -LiteralPath $LogPath) {
-            $logLines = Get-Content -LiteralPath $LogPath
-            ($logLines | Select-Object -Last 120) -join [Environment]::NewLine
+            $logLines = @(Get-Content -LiteralPath $LogPath)
+            $markerPattern = '(?i)(error occurred|rename|defaulting to abort|user canceled|abort/retry/ignore|unable to|could not|failed)'
+            $markerIndexes = @(
+                for ($index = 0; $index -lt $logLines.Count; $index++) {
+                    if ($logLines[$index] -match $markerPattern) {
+                        $index
+                    }
+                }
+            )
+            if ($markerIndexes.Count -gt 0) {
+                $firstMarker = [Math]::Max(0, $markerIndexes[0] - 3)
+                $lastMarker = [Math]::Min($logLines.Count - 1, $markerIndexes[-1] + 3)
+                $markerContext = @($logLines[$firstMarker..$lastMarker])
+                "Installer log error context:`n$($markerContext -join [Environment]::NewLine)"
+            } else {
+                "Installer log tail:`n$($logLines | Select-Object -Last 120 -join [Environment]::NewLine)"
+            }
         } else {
             "Installer log was not created: $LogPath"
         }
@@ -241,3 +256,4 @@ Assert-PreservedUserData
 
 Write-Output "Installer upgrade/install/uninstall E2E passed: $Version"
 Write-Output "Preserved user data: $DataDir"
+
