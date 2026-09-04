@@ -112,14 +112,7 @@ function Invoke-SilentInstaller {
     if ($process.ExitCode -ne 0) {
         $details = if (Test-Path -LiteralPath $LogPath) {
             $logLines = Get-Content -LiteralPath $LogPath
-            $keyLines = $logLines | Where-Object {
-                $_ -match "(?i)(fatal|exception|access denied|createfile|deletefile|error|abort|cancel|user chose|setup exit code)"
-            } | Select-Object -Last 30
-            if ($keyLines) {
-                $keyLines -join [Environment]::NewLine
-            } else {
-                ($logLines | Select-Object -Last 40) -join [Environment]::NewLine
-            }
+            ($logLines | Select-Object -Last 120) -join [Environment]::NewLine
         } else {
             "Installer log was not created: $LogPath"
         }
