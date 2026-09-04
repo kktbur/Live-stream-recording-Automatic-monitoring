@@ -30,6 +30,10 @@ for platform-by-platform certificate-compatibility evidence.
   prerequisite-dependent failures; Ruff, compileall and `git diff --check` passed.
 - Independent Standards/Spec review at the latest fixed point found no remaining hard
   implementation or specification issue.
+- Remote Draft PR [#11](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/11)
+  is open/draft. Windows CI [#32](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33907554593)
+  passed tests, Windows build, packaged self-check, ten-language installer build, and
+  installer install/upgrade/uninstall smoke; its diagnostic artifact is retained for seven days.
 - Limitation: the focused suite uses an injected offline client. It does not establish
   current public-room availability, dynamic CDN reachability or a short recording.
 - Release boundary: no merge, Tag, formal Release or `main` modification is part of PR-07.

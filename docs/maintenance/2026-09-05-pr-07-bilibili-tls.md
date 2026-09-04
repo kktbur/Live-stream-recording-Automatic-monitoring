@@ -1,12 +1,14 @@
 # PR-07：Bilibili 第一方 TLS 迁移
 
-- 状态：本地实施、专项验证和两轮审查问题修正完成；最新固定点独立复审完成，远程 Draft PR 待完成
+- 状态：本地实施、专项验证、两轮审查问题修正和远程 Draft PR/Windows CI 完成；公开样本验证仍待完成
 - 路线目标版本：`0.2.2`（本 PR 不修改当前包版本 `0.2.1`）
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
 - 本地分支：`codex/0.2.2-07-bilibili-tls`
 - 本地基线：PR-06 本地提交 `51ead3b6fae2dcd9ff105855b370ac71602d060f`
 - 本地实现提交：`f00f209`
 - 远程恢复参考：PR-06 head `87e6d04b2d84295c9df429b50e64165d9258bfc1`
+- 远程 Draft PR：[#11](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/11)，
+  head `1eaaae4f4d60ee90b51380469896502d8b047e8a`，目标为 PR-06 分支，保持 open/draft。
 
 ## 范围
 
@@ -47,6 +49,9 @@ Bilibili 房间状态、主播信息、标题和播放地址请求不再继承�
   引入可观测的错误分类与重试策略。
 - 最新固定点的独立 Standards/Spec 复审均无硬性问题；复审同时确认真实公开房间、动态
   CDN 可达性和短时录制仍未验证，因此不能据此关闭 Issue #1。
+- 远程 Windows CI [#32](https://github.com/kktbur/Live-streaming-recording-Automatic-monitoring/actions/runs/33907554593)
+  通过：锁文件、测试、Windows 构建、打包自检、十语言安装器构建及安装/升级/卸载冒烟均成功；
+  诊断产物为 `RecoBox-installer-e2e-diagnostics-33907554593`，保留至 2026-09-11。
 - 本轮尚未用真实公开直播间做网络/短时录制验证；该项必须由后续公开样本流程和
   Windows CI/人工验收单独确认。
 
@@ -59,7 +64,7 @@ Bilibili 房间状态、主播信息、标题和播放地址请求不再继承�
 - [x] 匿名访问拒绝、HTTP 异常、非对象 JSON 和嵌套 codec 结构异常有回归覆盖。
 - [x] 其他平台和锁定上游源码没有被本轮批量改写。
 - [x] 最新固定点的独立 Standards/Spec 复审完成并记录结论。
-- [ ] Draft PR 和远程 Windows CI 完成并记录远程证据。
+- [x] Draft PR 和远程 Windows CI 完成并记录远程证据。
 
 ## 恢复与下一步
 
@@ -67,5 +72,5 @@ Bilibili 房间状态、主播信息、标题和播放地址请求不再继承�
 不改写 PR-06、PR-05 及更早分支，不触碰 `main`。远程发布保持 Draft，不创建
 Tag、正式 Release 或合并 Pull Request。
 
-下一步是在独立审查和远程 CI 通过后，继续从矩阵选择下一个平台；Bilibili 完成
+下一步是在公开样本验证边界明确后，继续从矩阵选择下一个平台；Bilibili 完成
 不等于 Issue #1 整体完成。

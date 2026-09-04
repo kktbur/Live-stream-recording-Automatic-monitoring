@@ -28,6 +28,9 @@
   offline result; detailed retry/error taxonomy remains a later reliability-stage change.
 - The latest independent Standards/Spec review found no remaining hard issue; public-room,
   dynamic-CDN and short-recording validation remain explicitly outstanding.
+- Draft PR [#11](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/11)
+  is open/draft and Windows CI [#32](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33907554593)
+  passed the remote Windows validation stages; the PR remains unmerged.
 - Public-room network and short-recording validation remain outstanding; PR-07 does not
   close Issue #1 globally.
 
