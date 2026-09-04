@@ -75,5 +75,10 @@ for platform-by-platform certificate-compatibility evidence.
   FFmpeg-prerequisite failures; Ruff, compileall, and `git diff --check` passed.
 - Limitation: no 100-room pressure test, real platform rate-limit measurement, error taxonomy,
   stall recovery, RecordingSession, or crash recovery is claimed by this PR.
-- Independent Standards/Spec review, Draft PR, and remote Windows CI remain required.
+- Final independent Standards/Spec review found no blocking issue. Draft PR
+  [#13](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/13)
+  is open/draft, and Windows CI [#38](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33923911448)
+  passed the remote Windows validation stages, including installer install/upgrade/uninstall smoke.
+- The UI evidence screenshot is [PR-09 settings dialog](maintenance/assets/pr-09-settings-dialog.png);
+  it uses synthetic data and contains no credentials or real playback URL.
 - Release boundary: no merge, Tag, formal Release, or `main` modification is part of PR-09.

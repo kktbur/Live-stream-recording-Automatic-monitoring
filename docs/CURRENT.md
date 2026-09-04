@@ -70,5 +70,9 @@ from this durable product document.
   global Qt pool used by recording and conversion work.
 - Local focused tests are `27 passed`; the full suite is `142 passed、2 failed、5 warnings`,
   with the same missing-FFmpeg prerequisite recorded in the PR-09 maintenance record.
+- Final independent Standards/Spec review found no blocking issue. Draft PR
+  [#13](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/13)
+  remains open/draft, and Windows CI [#38](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33923911448)
+  passed the remote Windows build, self-check, installer, and install/upgrade/uninstall gates.
 - Error taxonomy, stall detection, RecordingSession, recovery state machine, offline hysteresis,
   crash recovery and pressure/fault injection remain later roadmap tasks.

@@ -1,10 +1,12 @@
 # PR-09：Resolver 调度、并发限制与抖动
 
-- 状态：本地实现、专项验证和项目知识更新完成；独立 Standards/Spec 审查、远程 Draft PR
-  和 Windows CI 待完成
+- 状态：本地实现、专项验证、独立 Standards/Spec 审查、远程 Draft PR 和 Windows CI
+  已完成；100 房间压力/故障注入仍按路线留给后续任务
 - 路线目标版本：`0.3.0`（本 PR 不修改当前包版本 `0.2.1`）
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
-- 本地分支：`codex/0.3.0-01-scheduler`
+- 本地分支：`codex/0.3.0-01-scheduler`，本地固定点 `141803d`
+- 远程 Draft PR：[PR #13](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/13)，
+  远程 head `7138a6adff74783e2233208691e57c65aa30ad17`
 - 远程恢复点：PR-08 文档同步后的 head `159a6893e7555efbed9169cbd4b03346a1d82cb6`
 
 ## 范围
@@ -45,6 +47,13 @@
 - `python -m compileall -q src tests`：通过。
 - `git diff --check`：通过。
 
+## 远程验证
+
+- Windows CI [run #38](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33923911448)：通过。
+- 该运行完成 lockfile 校验、测试、Windows 应用构建、打包自检、十语言安装器构建和安装/升级/卸载冒烟。
+- 诊断工件 `RecoBox-installer-e2e-diagnostics-33923911448` 上传成功，保留至 2026-09-11。
+- 独立 Standards/Spec 最终审查均无 P0/P1/P2/P3 阻塞问题；UI 截图已作为 PR 描述和维护记录证据。
+
 ## 证据边界
 
 当前测试证明限流、冷却、抖动和线程池隔离的确定性逻辑，不证明 100 个房间的长时间
@@ -61,8 +70,8 @@
 - [x] 监控整合测试证明全局 permit 会阻止多余 Resolver 启动，并在完成后释放。
 - [x] 设置页限制值的持久化、边界拒绝、监控器热更新和平台冷却重算有回归测试。
 - [x] 本地专项/全量测试、Ruff、compileall 和差异检查完成，FFmpeg 前置限制已记录。
-- [ ] 独立 Standards/Spec 审查完成并记录最终结论。
-- [ ] Draft PR 和远程 Windows CI 完成并记录远程证据。
+- [x] 独立 Standards/Spec 审查完成并记录最终结论。
+- [x] Draft PR 和远程 Windows CI 完成并记录远程证据。
 - [ ] 受控 100 房间压力/故障注入验证完成；这属于 PR-09 后续可靠性验证，不在本轮伪造。
 
 ## 恢复与下一步
