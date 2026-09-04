@@ -14,6 +14,7 @@ from . import __version__
 from .localization import LocalizationController
 from .monitor import MonitoringCoordinator
 from .preview import PreviewController
+from .rate_limit import ResolverRateLimitConfig
 from .recording import RecordingManager
 from .resolver import DouyinLiveRecorderResolver
 from .resources import application_resource, configure_bundled_runtime, package_resource
@@ -70,7 +71,12 @@ def main() -> int:
     desktop_actions = DesktopActions()
     legacy_import = LegacyImportController(database, rooms, settings)
     recorder = RecordingManager(rooms, database)
-    monitor = MonitoringCoordinator(rooms, DouyinLiveRecorderResolver())
+    monitor = MonitoringCoordinator(
+        rooms,
+        DouyinLiveRecorderResolver(),
+        rate_limit_config=_resolver_rate_limit_config(settings),
+    )
+    _connect_resolver_rate_limit_settings(settings, monitor)
     preview = PreviewController(monitor)
     monitor.liveDetected.connect(recorder.start_for_room)
     recorder.retryRequested.connect(monitor.schedule_retry)
@@ -110,6 +116,22 @@ def main() -> int:
     app.setProperty("recordingManager", recorder)
     monitor.start()
     return app.exec()
+
+
+def _resolver_rate_limit_config(settings: SettingsController) -> ResolverRateLimitConfig:
+    return ResolverRateLimitConfig(
+        max_resolver_concurrency=settings.resolverMaxConcurrency,
+        default_platform_concurrency=settings.resolverPlatformConcurrency,
+        default_platform_interval_seconds=settings.resolverPlatformIntervalSeconds,
+    )
+
+
+def _connect_resolver_rate_limit_settings(
+    settings: SettingsController, monitor: MonitoringCoordinator
+) -> None:
+    settings.defaultsChanged.connect(
+        lambda: monitor.update_rate_limit_config(_resolver_rate_limit_config(settings))
+    )
 
 
 if __name__ == "__main__":

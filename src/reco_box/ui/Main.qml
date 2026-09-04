@@ -415,6 +415,14 @@ ApplicationWindow {
                             ColumnLayout { Layout.preferredWidth: 170; Label { text: qsTr("检测间隔（秒）") } TextField { id: defaultInterval; text: String(settingsController.defaultCheckInterval); validator: IntValidator { bottom: 30; top: 86400 } Layout.fillWidth: true } }
                             ColumnLayout { Layout.preferredWidth: 170; Label { text: qsTr("磁盘保护（GB）") } TextField { id: minimumFreeGb; text: String(settingsController.minimumFreeGb); validator: IntValidator { bottom: 1; top: 1024 } Layout.fillWidth: true } }
                         }
+                        Label { text: qsTr("Resolver 调度限制"); color: window.ink; font.pixelSize: 15; font.weight: Font.DemiBold }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            ColumnLayout { Layout.fillWidth: true; Label { text: qsTr("最大并发") } TextField { id: resolverMaxConcurrency; text: String(settingsController.resolverMaxConcurrency); validator: IntValidator { bottom: 1; top: 32 } Layout.fillWidth: true } }
+                            ColumnLayout { Layout.fillWidth: true; Label { text: qsTr("单平台并发") } TextField { id: resolverPlatformConcurrency; text: String(settingsController.resolverPlatformConcurrency); validator: IntValidator { bottom: 1; top: 16 } Layout.fillWidth: true } }
+                            ColumnLayout { Layout.fillWidth: true; Label { text: qsTr("平台冷却（秒）") } TextField { id: resolverPlatformInterval; text: String(settingsController.resolverPlatformIntervalSeconds); validator: IntValidator { bottom: 0; top: 3600 } Layout.fillWidth: true } }
+                        }
+                        Label { text: qsTr("用于分散解析请求；修改后立即影响新的监控请求。"); color: window.muted; font.pixelSize: 11 }
                         Label { text: qsTr("默认代理地址（可选）") }
                         TextField { id: defaultProxy; text: settingsController.defaultProxy; Layout.fillWidth: true; placeholderText: qsTr("新直播间继承；留空表示直连") }
                         CheckBox { id: defaultSegment; text: qsTr("新直播间默认启用分段"); checked: settingsController.defaultSegmentEnabled; onClicked: window.settingsMessage = qsTr("设置已更改，请点击保存设置") }
@@ -423,7 +431,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Label { text: qsTr("启动后自动监控 · 关闭窗口最小化到托盘 · 不随 Windows 开机启动"); color: window.muted; font.pixelSize: 11 }
                             Item { Layout.fillWidth: true }
-                            AppButton { text: qsTr("保存设置"); tone: "primary"; onClicked: { const error = settingsController.saveDefaults(defaultRootField.text, defaultFormat.currentText, defaultQuality.currentValue, defaultInterval.text, defaultSegment.checked, defaultSegmentMinutes.text, minimumFreeGb.text, defaultProxy.text); window.settingsMessage = error.length > 0 ? error : (defaultSegment.checked ? qsTr("已保存并确认：以后新增直播间默认每 ") + defaultSegmentMinutes.text + qsTr(" 分钟分段") : qsTr("已保存并确认：以后新增直播间默认不分段")) } }
+                            AppButton { text: qsTr("保存设置"); tone: "primary"; onClicked: { const error = settingsController.saveDefaults(defaultRootField.text, defaultFormat.currentText, defaultQuality.currentValue, defaultInterval.text, defaultSegment.checked, defaultSegmentMinutes.text, minimumFreeGb.text, defaultProxy.text, resolverMaxConcurrency.text, resolverPlatformConcurrency.text, resolverPlatformInterval.text); window.settingsMessage = error.length > 0 ? error : (defaultSegment.checked ? qsTr("已保存并确认：以后新增直播间默认每 ") + defaultSegmentMinutes.text + qsTr(" 分钟分段") : qsTr("已保存并确认：以后新增直播间默认不分段")) } }
                         }
                         Label { text: window.settingsMessage; color: window.settingsMessage.indexOf(qsTr("已保存并确认")) === 0 ? window.success : window.settingsMessage.indexOf(qsTr("设置已更改")) === 0 ? window.warning : window.danger; font.pixelSize: 11; font.weight: Font.DemiBold }
                     }

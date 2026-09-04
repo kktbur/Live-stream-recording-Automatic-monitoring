@@ -4,8 +4,8 @@
 
 - Status: ACTIVE
 - Current package version: `0.2.1` (single source: `pyproject.toml`).
-- Current maintenance roadmap target: `0.2.2`.
-- The latest maintenance record is [PR-08 YouTube first-party TLS migration](maintenance/2026-09-05-pr-08-youtube-tls.md).
+- Current maintenance roadmap target: `0.3.0`.
+- The latest maintenance record is [PR-09 Resolver scheduling and limits](maintenance/2026-09-05-pr-09-scheduler.md).
 
 ## Confirmed PR-06 boundary
 
@@ -56,3 +56,23 @@ from this durable product document.
   passed the remote validation stages. A corrected follow-up independent review did not
   return a final report; public-room/CDN reachability and short-recording validation also
   remain outstanding. PR-08 does not close Issue #1 globally.
+
+## Confirmed PR-09 boundary
+
+- `src/reco_box/scheduler.py` calculates per-room deadlines with injectable `0.9..1.1`
+  jitter, uses 5→10→20→40→60 second Resolver backoff with a final 60-second cap, and keeps
+  caller-selected recording delays explicit.
+- `src/reco_box/rate_limit.py` provides a configurable global Resolver limit (default 4),
+  platform concurrency (default 1), and platform cooldown (default 1 second), with explicit
+  acquisition and release state. The existing global settings page persists the three values
+  within validated ranges and applies changes to new monitoring requests immediately.
+- `MonitoringCoordinator` uses an independent Resolver `QThreadPool`; it does not change the
+  global Qt pool used by recording and conversion work.
+- Local focused tests are `27 passed`; the full suite is `142 passed、2 failed、5 warnings`,
+  with the same missing-FFmpeg prerequisite recorded in the PR-09 maintenance record.
+- Final independent Standards/Spec review found no blocking issue. Draft PR
+  [#13](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/13)
+  remains open/draft, and Windows CI [#39](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33924632389)
+  passed the remote Windows build, self-check, installer, and install/upgrade/uninstall gates.
+- Error taxonomy, stall detection, RecordingSession, recovery state machine, offline hysteresis,
+  crash recovery and pressure/fault injection remain later roadmap tasks.

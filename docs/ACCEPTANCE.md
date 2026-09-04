@@ -58,3 +58,27 @@ for platform-by-platform certificate-compatibility evidence.
 - A corrected follow-up Standards/Spec review did not return a final report, so independent
   review remains open for maintainer acceptance.
 - Release boundary: no merge, Tag, formal Release or `main` modification is part of PR-08.
+
+## PR-09 current acceptance
+
+- Scope: 0.3.0-01 Resolver scheduling only; the package version remains `0.2.1`.
+- `MonitoringCoordinator` uses an independent Resolver `QThreadPool` with default maximum
+  thread count 4; the Qt global pool remains untouched.
+- `ResolverRateLimiter` enforces configurable global concurrency, per-platform concurrency,
+  and per-platform cooldown; the defaults are 4, 1, and 1 second respectively. The existing
+  global settings page persists these three values with validation ranges of 1–32, 1–16, and
+  0–3600 seconds, and applies saved changes to new monitoring requests immediately.
+- `MonitoringScheduler` applies injectable `0.9..1.1` jitter to successful checks and Resolver
+  retries, uses 5→10→20→40→60 second backoff with a final 60-second cap, and leaves
+  recording-provided delays unjittered and uncapped.
+- Local evidence: 27 focused tests passed; the full suite has 142 passed and 2 known
+  FFmpeg-prerequisite failures; Ruff, compileall, and `git diff --check` passed.
+- Limitation: no 100-room pressure test, real platform rate-limit measurement, error taxonomy,
+  stall recovery, RecordingSession, or crash recovery is claimed by this PR.
+- Final independent Standards/Spec review found no blocking issue. Draft PR
+  [#13](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/13)
+  is open/draft, and Windows CI [#39](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33924632389)
+  passed the remote Windows validation stages, including installer install/upgrade/uninstall smoke.
+- The UI evidence screenshot is [PR-09 settings dialog](maintenance/assets/pr-09-settings-dialog.png);
+  it uses synthetic data and contains no credentials or real playback URL.
+- Release boundary: no merge, Tag, formal Release, or `main` modification is part of PR-09.

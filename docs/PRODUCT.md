@@ -18,6 +18,10 @@ and recording history locally and does not require a Reco Box account.
 ## Current maintenance focus
 
 The 0.2.2 roadmap includes TLS certificate-verification hardening. PR-06 first
-establishes the platform network matrix and connects Reco Box's own TwitCasting
-anonymous requests to a verified-by-default policy. Other upstream paths must
-be migrated and validated platform by platform before Issue #1 is closed.
+establishes the platform network matrix; PR-07 and PR-08 migrate Bilibili and
+YouTube request boundaries to verified-by-default first-party adapters. Issue #1
+remains open because other upstream paths and public-sample evidence are pending.
+
+The active reliability work begins with the 0.3.0 Resolver scheduler: bounded
+concurrency, platform cooldown, jitter, and retry timing are being separated from
+recording and conversion workers before the later recovery-state-machine work.
