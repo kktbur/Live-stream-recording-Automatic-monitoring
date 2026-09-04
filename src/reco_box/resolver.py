@@ -13,6 +13,7 @@ from platformdirs import user_data_path
 from .domain import Platform
 from .localization import tr
 from .network import normalize_proxy
+from .network_policy import DEFAULT_NETWORK_POLICY, NetworkPolicy
 from .platforms import detect_platform
 from .resources import upstream_resource
 
@@ -68,11 +69,13 @@ class DouyinLiveRecorderResolver:
         stream_module: ModuleType | None = None,
         upstream_path: Path | None = None,
         runtime_path: Path | None = None,
+        network_policy: NetworkPolicy | None = None,
     ):
         self._spider = spider_module
         self._stream = stream_module
         self.upstream_path = Path(upstream_path or default_upstream_path())
         self.runtime_path = Path(runtime_path or default_upstream_runtime_path())
+        self.network_policy = network_policy or DEFAULT_NETWORK_POLICY
 
     def _load_spider(self) -> ModuleType:
         if self._spider is not None:
@@ -194,7 +197,7 @@ class DouyinLiveRecorderResolver:
         }
         if "login=true" in url.lower():
             raise AnonymousAccessUnavailableError(tr("该 TwitCasting 直播间要求登录，匿名模式不可用"))
-        html = await spider.async_req(url, proxy_addr=proxy_addr, headers=headers)
+        html = await self._anonymous_request(spider, url, proxy_addr, headers)
         anchor = re.search(r"<title>(.*?) \(@(.*?)\).*?Twit", str(html), re.DOTALL)
         status = re.search(r'data-is-onlive="(.*?)"', str(html))
         movie_id = re.search(r'data-movie-id="(.*?)"', str(html))
@@ -214,7 +217,7 @@ class DouyinLiveRecorderResolver:
             "https://twitcasting.tv/streamserver.php?"
             f"target={anchor_id}&mode=client&player=pc_web"
         )
-        stream_text = await spider.async_req(endpoint, proxy_addr=proxy_addr, headers=headers)
+        stream_text = await self._anonymous_request(spider, endpoint, proxy_addr, headers)
         streams = json.loads(str(stream_text)).get("tc-hls", {}).get("streams", {})
         quality_order = {"high": 0, "medium": 1, "low": 2}
         play_urls = [
@@ -227,6 +230,20 @@ class DouyinLiveRecorderResolver:
             raise RuntimeError(tr("TwitCasting 未返回可录制的公开播放地址"))
         result["play_url_list"] = play_urls
         return result
+
+    async def _anonymous_request(
+        self,
+        spider: ModuleType,
+        url: str,
+        proxy_addr: str | None,
+        headers: dict[str, str],
+    ) -> Any:
+        return await spider.async_req(
+            url,
+            proxy_addr=proxy_addr,
+            headers=headers,
+            verify=self.network_policy.verify_for(Platform.TWITCASTING, url),
+        )
 
 
 def _ffmpeg_headers(headers: dict[str, str]) -> str:

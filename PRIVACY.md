@@ -13,12 +13,14 @@ network endpoints required by the pinned resolver. Resolved transient stream
 URLs are used by FFmpeg/Qt Multimedia in memory and are deliberately removed
 from application logging.
 
-The pinned upstream resolver currently disables TLS certificate verification for
-its main asynchronous platform requests. This compatibility behavior can reduce
-protection against man-in-the-middle tampering of resolver responses and should
-be treated as a medium-risk limitation. Use Reco Box on a trusted network. The
-project will test restoring verification platform by platform and retain only
-explicit, narrowly scoped exceptions where required for compatibility.
+The pinned upstream resolver still disables TLS certificate verification by
+default for most of its main asynchronous platform requests. This compatibility
+behavior can reduce protection against man-in-the-middle tampering of resolver
+responses and remains a medium-risk limitation. Use Reco Box on a trusted
+network. PR-06 adds a first-party policy with verification enabled by default
+and applies it to Reco Box's anonymous TwitCasting requests; the other upstream
+paths remain pending platform-by-platform verification. Any future exception
+must name the platform, exact host, reason, test, and date.
 
 The legacy importer reads only the selected configuration files. It imports
 room URLs and non-sensitive recording preferences; cookies, account tokens,

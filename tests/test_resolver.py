@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from reco_box.domain import Platform
+from reco_box.network_policy import NetworkPolicy, TLSEndpointOverride
 from reco_box.resolver import (
     AnonymousAccessUnavailableError,
     DouyinLiveRecorderResolver,
@@ -94,7 +95,10 @@ def test_taobao_reports_anonymous_access_limit_without_calling_upstream() -> Non
 
 
 def test_twitcasting_forwards_anonymous_viewer_headers_to_ffmpeg() -> None:
-    async def async_req(url, proxy_addr=None, headers=None):
+    captured = {"verify": []}
+
+    async def async_req(url, proxy_addr=None, headers=None, verify=None):
+        captured["verify"].append(verify)
         if "streamserver.php" in url:
             return '{"tc-hls":{"streams":{"high":"https://cdn.example/live.m3u8"}}}'
         return (
@@ -110,6 +114,39 @@ def test_twitcasting_forwards_anonymous_viewer_headers_to_ffmpeg() -> None:
     assert result.stream_urls == ("https://cdn.example/live.m3u8",)
     assert "Referer: https://twitcasting.tv/\r\n" in result.headers
     assert result.headers.endswith("\r\n")
+    assert captured["verify"] == [True, True]
+
+
+def test_twitcasting_applies_exact_host_override_through_resolver() -> None:
+    captured = {"verify": []}
+
+    async def async_req(url, proxy_addr=None, headers=None, verify=None):
+        captured["verify"].append(verify)
+        if "streamserver.php" in url:
+            return '{"tc-hls":{"streams":{"high":"https://cdn.example/live.m3u8"}}}'
+        return (
+            '<title>Demo (@demo) TwitCasting</title>'
+            '<div data-is-onlive="true" data-movie-id="123"></div>'
+        )
+
+    policy = NetworkPolicy(
+        tls_overrides=(
+            TLSEndpointOverride(
+                Platform.TWITCASTING,
+                "twitcasting.tv",
+                "test-only exact-host compatibility override",
+            ),
+        )
+    )
+    resolver = DouyinLiveRecorderResolver(
+        spider_module=SimpleNamespace(async_req=async_req),
+        network_policy=policy,
+    )
+
+    result = asyncio.run(resolver.resolve("https://twitcasting.tv/demo"))
+
+    assert result.stream_urls == ("https://cdn.example/live.m3u8",)
+    assert captured["verify"] == [False, False]
 
 
 @pytest.mark.parametrize(

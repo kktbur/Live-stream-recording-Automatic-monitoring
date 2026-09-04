@@ -51,6 +51,18 @@ platform tokens, recordings and user configuration.
   default in `src/http_clients/async_http.py`. The unused `ssl_context` objects
   in `spider.py` and `sync_http.py` are not the effective call path. This is an
   inherited compatibility risk and is disclosed in `README.md` and `PRIVACY.md`.
+
+## TLS follow-up: 2026-09-04
+
+- PR-06 adds `src/reco_box/network_policy.py` with certificate verification as
+  the first-party default and exact-host override matching.
+- The Reco Box-owned anonymous TwitCasting path now explicitly passes
+  `verify=True` to the pinned upstream request helper.
+- Other exposed platforms that still call the upstream shared `async_req`
+  without an explicit verification argument remain unverified by default. The
+  platform-by-platform status and plain-HTTP paths are recorded in
+  `docs/platform-network-security.md`; this PR does not claim the security
+  issue is globally closed.
 - The source logo retained an Adobe XMP metadata block in the 0.1.3 release;
   it contains editing timestamps and document identifiers but no user path or
   account identifier. The 0.1.4 source asset removes that unnecessary metadata.

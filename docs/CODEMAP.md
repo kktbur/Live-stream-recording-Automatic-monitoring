@@ -1,0 +1,29 @@
+# CODEMAP
+
+## Repository map
+
+    AGENTS.md                 Repository rules and safety boundary
+    README.md                 User-facing overview and setup
+    PRIVACY.md                Local-data and network privacy boundary
+    SECURITY.md               Security policy
+    OPEN_SOURCE_AUDIT.md      Third-party source and runtime audit
+    docs/
+      INDEX.md               Documentation navigation
+      PRODUCT.md             Product purpose and boundary
+      ACCEPTANCE.md          Maintenance acceptance rules
+      CURRENT.md             Durable current state
+      CODEMAP.md             This repository map
+      decisions/              Durable engineering decisions
+      maintenance/            Per-PR maintenance records
+      platform-*.md           Platform validation and network evidence
+    src/reco_box/             Application and resolver code
+    tests/                    Automated regression and contract tests
+    tools/                    Verification and runtime-preparation tools
+    packaging/                PyInstaller and Inno Setup inputs
+    vendor/                   Pinned upstream source
+
+## Change navigation
+
+Start with `docs/INDEX.md`, then read the applicable maintenance record and ADR.
+For network changes, read `docs/platform-network-security.md` and
+`docs/agents/issue-tracker.md` before changing a platform adapter.
