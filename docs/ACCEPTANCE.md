@@ -31,7 +31,7 @@ for platform-by-platform certificate-compatibility evidence.
 - Independent Standards/Spec review at the latest fixed point found no remaining hard
   implementation or specification issue.
 - Remote Draft PR [#11](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/11)
-  is open/draft. Windows CI [#32](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33907554593)
+  is open/draft. Windows CI [#33](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33908466198)
   passed tests, Windows build, packaged self-check, ten-language installer build, and
   installer install/upgrade/uninstall smoke; its diagnostic artifact is retained for seven days.
 - Limitation: the focused suite uses an injected offline client. It does not establish

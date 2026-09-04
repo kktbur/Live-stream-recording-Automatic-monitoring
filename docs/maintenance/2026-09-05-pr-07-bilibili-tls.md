@@ -8,7 +8,7 @@
 - 本地实现提交：`f00f209`
 - 远程恢复参考：PR-06 head `87e6d04b2d84295c9df429b50e64165d9258bfc1`
 - 远程 Draft PR：[#11](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/11)，
-  head `1eaaae4f4d60ee90b51380469896502d8b047e8a`，目标为 PR-06 分支，保持 open/draft。
+  head `befb4ae5ca853f5295aea13a03b965d911162a86`，目标为 PR-06 分支，保持 open/draft。
 
 ## 范围
 
@@ -49,9 +49,9 @@ Bilibili 房间状态、主播信息、标题和播放地址请求不再继承�
   引入可观测的错误分类与重试策略。
 - 最新固定点的独立 Standards/Spec 复审均无硬性问题；复审同时确认真实公开房间、动态
   CDN 可达性和短时录制仍未验证，因此不能据此关闭 Issue #1。
-- 远程 Windows CI [#32](https://github.com/kktbur/Live-streaming-recording-Automatic-monitoring/actions/runs/33907554593)
+- 远程 Windows CI [#33](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33908466198)
   通过：锁文件、测试、Windows 构建、打包自检、十语言安装器构建及安装/升级/卸载冒烟均成功；
-  诊断产物为 `RecoBox-installer-e2e-diagnostics-33907554593`，保留至 2026-09-11。
+  诊断产物为 `RecoBox-installer-e2e-diagnostics-33908466198`，保留至 2026-09-11。
 - 本轮尚未用真实公开直播间做网络/短时录制验证；该项必须由后续公开样本流程和
   Windows CI/人工验收单独确认。
 
