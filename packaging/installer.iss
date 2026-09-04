@@ -1,5 +1,7 @@
 #define MyAppName "Reco Box"
-#define MyAppVersion "0.2.0"
+#ifndef MyAppVersion
+  #error MyAppVersion must be supplied by packaging\build_installer.ps1
+#endif
 #define MyAppPublisher "Reco Box"
 #define MyAppExeName "RecoBox.exe"
 
@@ -7,6 +9,10 @@
 AppId={{7E152346-66F4-4DD7-A830-A99B53A9848C}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppVersion}
+VersionInfoProductVersion={#MyAppVersion}
+VersionInfoTextVersion={#MyAppVersion}
+VersionInfoProductTextVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL=https://github.com/kktbur/Live-stream-recording-Automatic-monitoring
 AppSupportURL=https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/issues

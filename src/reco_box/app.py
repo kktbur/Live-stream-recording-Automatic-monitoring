@@ -10,6 +10,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication
 
+from . import __version__
 from .localization import LocalizationController
 from .monitor import MonitoringCoordinator
 from .preview import PreviewController
@@ -50,6 +51,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Reco Box")
     app.setOrganizationName("Reco Box")
+    app.setApplicationVersion(__version__)
     app.setQuitOnLastWindowClosed(False)
 
     icon = project_asset("reco-box-icon-final.png")
@@ -77,6 +79,7 @@ def main() -> int:
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("roomModel", rooms)
+    engine.rootContext().setContextProperty("applicationVersion", __version__)
     engine.rootContext().setContextProperty("roomProxyModel", room_proxy)
     engine.rootContext().setContextProperty("recordingManager", recorder)
     engine.rootContext().setContextProperty("historyModel", history)

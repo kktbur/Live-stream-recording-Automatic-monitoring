@@ -1,6 +1,8 @@
+import os
 from pathlib import Path
 
 import PySide6
+from PyInstaller.utils.hooks import copy_metadata
 
 PACKAGING_DIR = Path(SPECPATH).resolve()
 PROJECT_DIR = PACKAGING_DIR.parent
@@ -14,7 +16,12 @@ datas = [
     (str(PROJECT_DIR / "src" / "reco_box" / "translations"), "reco_box/translations"),
     (str(UPSTREAM_DIR / "src"), "vendor/DouyinLiveRecorder/src"),
     (str(UPSTREAM_DIR / "LICENSE"), "vendor/DouyinLiveRecorder"),
+    *copy_metadata("reco-box"),
 ]
+
+version_file = os.environ.get("RECO_BOX_VERSION_FILE")
+if version_file:
+    version_file = str(Path(version_file).resolve())
 
 hiddenimports = [
     "Crypto.Cipher.AES",
@@ -59,6 +66,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
+    version=version_file,
     # Keep the unsigned Windows build conservative: UPX can increase
     # antivirus false positives and provides little value for this bundle.
     upx=False,

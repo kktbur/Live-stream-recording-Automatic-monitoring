@@ -11,6 +11,7 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
 from PySide6.QtTest import QTest
 
+from reco_box import __version__
 from reco_box.localization import LocalizationController
 from reco_box.monitor import MonitoringCoordinator
 from reco_box.preview import PreviewController
@@ -45,6 +46,7 @@ def test_main_qml_loads(tmp_path) -> None:
     model.update_recording_progress(room_id, 60, 3 * 1024 * 1024 * 1024)
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("roomModel", model)
+    engine.rootContext().setContextProperty("applicationVersion", __version__)
     room_proxy = RoomFilterProxyModel(model)
     engine.rootContext().setContextProperty("roomProxyModel", room_proxy)
     engine.rootContext().setContextProperty("historyModel", RecordingHistoryModel(database))
@@ -73,6 +75,9 @@ def test_main_qml_loads(tmp_path) -> None:
     size_label = _find_visual_item(root.contentItem(), "roomFileSize")
     assert size_label is not None
     assert size_label.property("text") == "3.00 GB"
+    version_label = _find_visual_item(root.contentItem(), "applicationVersionLabel")
+    assert version_label is not None
+    assert version_label.property("text") == f"v{__version__}"
 
     preview_button = _find_visual_item(root.contentItem(), "previewButton")
     assert preview_button is not None

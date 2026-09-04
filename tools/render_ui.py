@@ -14,6 +14,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
 
+from reco_box import __version__
 from reco_box.domain import Platform, Room, RoomStatus
 from reco_box.monitor import MonitoringCoordinator
 from reco_box.preview import PreviewController
@@ -66,6 +67,7 @@ def main() -> None:
         )
         engine = QQmlApplicationEngine()
         engine.rootContext().setContextProperty("roomModel", model)
+        engine.rootContext().setContextProperty("applicationVersion", __version__)
         room_proxy = RoomFilterProxyModel(model)
         engine.rootContext().setContextProperty("roomProxyModel", room_proxy)
         engine.rootContext().setContextProperty("historyModel", RecordingHistoryModel(database))

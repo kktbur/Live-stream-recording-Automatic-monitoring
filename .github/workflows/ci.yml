@@ -46,6 +46,21 @@ jobs:
           ./.venv/Scripts/python.exe -m pip install --upgrade pip
           ./.venv/Scripts/python.exe -m pip install --editable ".[dev]"
 
+      - name: Read project version
+        id: project-version
+        shell: pwsh
+        run: |
+          $version = (& ./.venv/Scripts/python.exe tools/project_version.py).Trim()
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($version)) {
+            throw "Could not read the project version from pyproject.toml"
+          }
+          $packageVersion = (& ./.venv/Scripts/python.exe -c "import reco_box; print(reco_box.__version__)").Trim()
+          if ($LASTEXITCODE -ne 0 -or $packageVersion -ne $version) {
+            throw "Python package version mismatch: expected $version, got $packageVersion"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "PROJECT_VERSION=$version" >> $env:GITHUB_ENV
+
       - name: Prepare verified FFmpeg runtime
         shell: pwsh
         run: |
@@ -153,14 +168,16 @@ jobs:
         shell: pwsh
         run: |
           pwsh -NoProfile -File packaging/build_installer.ps1
-          $installer = Resolve-Path "dist/installer/RecoBox-Setup-0.2.0.exe"
+          $installerName = "RecoBox-Setup-$env:PROJECT_VERSION.exe"
+          $installer = Resolve-Path "dist/installer/$installerName"
           $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  RecoBox-Setup-0.2.0.exe" | Set-Content -Encoding ascii "$installer.sha256.txt"
+          "$hash  $installerName" | Set-Content -Encoding ascii "$installer.sha256.txt"
+          pwsh -NoProfile -File tools/check_version_consistency.ps1 -ExecutablePath "dist/Reco Box/RecoBox.exe" -InstallerPath $installer.Path
 
       - name: Upload installer test artifact
         uses: actions/upload-artifact@v6
         with:
-          name: RecoBox-Setup-0.2.0
+          name: RecoBox-Setup-${{ steps.project-version.outputs.version }}
           path: |
-            dist/installer/RecoBox-Setup-0.2.0.exe
-            dist/installer/RecoBox-Setup-0.2.0.exe.sha256.txt
+            dist/installer/RecoBox-Setup-${{ steps.project-version.outputs.version }}.exe
+            dist/installer/RecoBox-Setup-${{ steps.project-version.outputs.version }}.exe.sha256.txt
