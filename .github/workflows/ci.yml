@@ -34,27 +34,29 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            uv.lock
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Check uv lockfile
+        shell: pwsh
+        run: uv lock --check
 
       - name: Install project and development dependencies
         shell: pwsh
-        run: |
-          python -m venv .venv
-          ./.venv/Scripts/python.exe -m pip install --upgrade pip
-          ./.venv/Scripts/python.exe -m pip install --editable ".[dev]"
+        run: uv sync --locked --extra dev
 
       - name: Read project version
         id: project-version
         shell: pwsh
         run: |
-          $version = (& ./.venv/Scripts/python.exe tools/project_version.py).Trim()
+          $version = (& uv run --locked python tools/project_version.py).Trim()
           if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($version)) {
             throw "Could not read the project version from pyproject.toml"
           }
-          $packageVersion = (& ./.venv/Scripts/python.exe -c "import reco_box; print(reco_box.__version__)").Trim()
+          $packageVersion = (& uv run --locked python -c "import reco_box; print(reco_box.__version__)").Trim()
           if ($LASTEXITCODE -ne 0 -or $packageVersion -ne $version) {
             throw "Python package version mismatch: expected $version, got $packageVersion"
           }
@@ -100,11 +102,11 @@ jobs:
 
       - name: Check first-party source
         shell: pwsh
-        run: ./.venv/Scripts/python.exe -m ruff check src tests tools
+        run: uv run --locked ruff check src tests tools
 
       - name: Run tests
         shell: pwsh
-        run: ./.venv/Scripts/python.exe -m pytest tests -q -p no:cacheprovider
+        run: uv run --locked pytest tests -q -p no:cacheprovider
 
       - name: Build Windows application
         shell: pwsh
