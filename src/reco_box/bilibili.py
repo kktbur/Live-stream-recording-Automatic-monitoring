@@ -312,6 +312,8 @@ def _modern_url(payload: Mapping[str, Any], quality_code: str) -> str:
     codecs = _optional_mapping(first_format).get("codec")
     if not isinstance(codecs, list) or not codecs:
         return ""
+    if any(not isinstance(item, Mapping) for item in codecs):
+        raise TypeError("Bilibili codec entries must be objects")
 
     sorted_codecs = sorted(codecs, key=lambda item: _as_int(item.get("current_qn")), reverse=True)
     quality_index = {"OD": 0, "BD": 1, "UHD": 2, "HD": 3, "SD": 4, "LD": 4}.get(

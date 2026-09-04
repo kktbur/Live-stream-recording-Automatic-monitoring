@@ -348,6 +348,36 @@ def test_bilibili_resolver_reports_malformed_api_response() -> None:
     assert result["live_status"] is False
 
 
+def test_bilibili_resolver_treats_malformed_nested_codec_as_offline() -> None:
+    captured: dict[str, Any] = {}
+    responses = _base_live_responses()
+    responses.extend(
+        [
+            {"code": -400, "data": {}},
+            {
+                "code": 0,
+                "data": {
+                    "live_status": 1,
+                    "playurl_info": {
+                        "playurl": {
+                            "stream": [{"format": [{"codec": ["not-an-object"]}]}]
+                        }
+                    },
+                },
+            },
+        ]
+    )
+    resolver = BilibiliResolver(client_factory=_factory_for(responses, captured))
+
+    result = asyncio.run(resolver.resolve("https://live.bilibili.com/6"))
+
+    assert result == {
+        "anchor_name": "",
+        "live_status": False,
+        "room_url": "https://live.bilibili.com/6",
+    }
+
+
 def test_bilibili_resolver_rejects_room_urls_without_numeric_id() -> None:
     captured: dict[str, Any] = {}
     resolver = BilibiliResolver(client_factory=_factory_for([], captured))

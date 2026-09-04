@@ -26,6 +26,8 @@
   proxy forwarding, short-link redirects, HTTP/anonymous-access errors and exact-host TLS policy behavior.
 - Expected anonymous request failures retain the upstream public contract and normalize to an
   offline result; detailed retry/error taxonomy remains a later reliability-stage change.
+- The latest independent Standards/Spec review found no remaining hard issue; public-room,
+  dynamic-CDN and short-recording validation remain explicitly outstanding.
 - Public-room network and short-recording validation remain outstanding; PR-07 does not
   close Issue #1 globally.
 
