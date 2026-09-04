@@ -114,6 +114,15 @@ class SettingsController(QObject):
         )
         self._minimum_free_gb = int(database.get_setting("minimum_free_gb", "5"))
         self._default_proxy = database.get_setting("default_proxy", "")
+        self._resolver_max_concurrency = int(
+            database.get_setting("resolver_max_concurrency", "4")
+        )
+        self._resolver_platform_concurrency = int(
+            database.get_setting("resolver_platform_concurrency", "1")
+        )
+        self._resolver_platform_interval_seconds = int(
+            database.get_setting("resolver_platform_interval_seconds", "1")
+        )
 
     @Property(str, notify=defaultsChanged)
     def defaultSaveRoot(self) -> str:
@@ -147,7 +156,19 @@ class SettingsController(QObject):
     def defaultProxy(self) -> str:
         return self._default_proxy
 
-    @Slot(str, str, str, str, bool, str, str, str, result=str)
+    @Property(int, notify=defaultsChanged)
+    def resolverMaxConcurrency(self) -> int:
+        return self._resolver_max_concurrency
+
+    @Property(int, notify=defaultsChanged)
+    def resolverPlatformConcurrency(self) -> int:
+        return self._resolver_platform_concurrency
+
+    @Property(int, notify=defaultsChanged)
+    def resolverPlatformIntervalSeconds(self) -> int:
+        return self._resolver_platform_interval_seconds
+
+    @Slot(str, str, str, str, bool, str, str, str, str, str, str, result=str)
     def saveDefaults(
         self,
         save_root: str,
@@ -158,6 +179,9 @@ class SettingsController(QObject):
         segment_minutes: str,
         minimum_free_gb: str,
         default_proxy: str,
+        resolver_max_concurrency: str = "4",
+        resolver_platform_concurrency: str = "1",
+        resolver_platform_interval_seconds: str = "1",
     ) -> str:
         if not save_root.strip():
             return tr("默认录制目录不能为空")
@@ -165,14 +189,23 @@ class SettingsController(QObject):
             interval = int(check_interval)
             minutes = int(segment_minutes)
             free_gb = int(minimum_free_gb)
+            max_concurrency = int(resolver_max_concurrency)
+            platform_concurrency = int(resolver_platform_concurrency)
+            platform_interval = int(resolver_platform_interval_seconds)
         except ValueError:
-            return tr("轮询秒数和分段分钟数必须是正整数")
+            return tr("轮询、分段和解析限制参数必须是整数")
         if interval < 30:
             return tr("轮询间隔不能低于 30 秒")
         if minutes <= 0:
             return tr("分段分钟数必须是正整数")
         if not 1 <= free_gb <= 1024:
             return tr("磁盘保护阈值必须是 1 至 1024 GB")
+        if not 1 <= max_concurrency <= 32:
+            return tr("Resolver 最大并发必须是 1 至 32")
+        if not 1 <= platform_concurrency <= 16:
+            return tr("单平台并发必须是 1 至 16")
+        if not 0 <= platform_interval <= 3600:
+            return tr("平台冷却必须是 0 至 3600 秒")
         try:
             normalized_proxy = normalize_proxy(default_proxy)
         except ValueError as error:
@@ -185,6 +218,13 @@ class SettingsController(QObject):
         self.database.set_setting("default_segment_minutes", str(minutes))
         self.database.set_setting("minimum_free_gb", str(free_gb))
         self.database.set_setting("default_proxy", normalized_proxy)
+        self.database.set_setting("resolver_max_concurrency", str(max_concurrency))
+        self.database.set_setting(
+            "resolver_platform_concurrency", str(platform_concurrency)
+        )
+        self.database.set_setting(
+            "resolver_platform_interval_seconds", str(platform_interval)
+        )
         self.reload()
         expected = {
             "default_save_root": save_root.strip(),
@@ -195,6 +235,9 @@ class SettingsController(QObject):
             "default_segment_minutes": str(minutes),
             "minimum_free_gb": str(free_gb),
             "default_proxy": normalized_proxy,
+            "resolver_max_concurrency": str(max_concurrency),
+            "resolver_platform_concurrency": str(platform_concurrency),
+            "resolver_platform_interval_seconds": str(platform_interval),
         }
         if any(self.database.get_setting(key) != value for key, value in expected.items()):
             return tr("设置保存后校验失败，请重试")
@@ -217,6 +260,15 @@ class SettingsController(QObject):
         )
         self._minimum_free_gb = int(self.database.get_setting("minimum_free_gb", "5"))
         self._default_proxy = self.database.get_setting("default_proxy", "")
+        self._resolver_max_concurrency = int(
+            self.database.get_setting("resolver_max_concurrency", "4")
+        )
+        self._resolver_platform_concurrency = int(
+            self.database.get_setting("resolver_platform_concurrency", "1")
+        )
+        self._resolver_platform_interval_seconds = int(
+            self.database.get_setting("resolver_platform_interval_seconds", "1")
+        )
         self.defaultsChanged.emit()
 
 

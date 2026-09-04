@@ -19,9 +19,13 @@
     src/reco_box/             Application and resolver code
       bilibili.py             First-party anonymous Bilibili resolver
       youtube.py              First-party anonymous YouTube resolver
+      scheduler.py            Resolver deadlines, jitter, and retry timing
+      rate_limit.py           Resolver concurrency and platform cooldown limits
     tests/                    Automated regression and contract tests
       test_bilibili.py        Offline Bilibili request-boundary tests
       test_youtube.py         Offline YouTube request-boundary tests
+      test_scheduler.py       Scheduler and resolver limit tests
+      test_settings_controller.py  Settings persistence and monitor wiring tests
     tools/                    Verification and runtime-preparation tools
     packaging/                PyInstaller and Inno Setup inputs
     vendor/                   Pinned upstream source
