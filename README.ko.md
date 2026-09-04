@@ -2,11 +2,11 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-Reco Box는 라이브 방송을 자동 모니터링하고 녹화하는 Windows x64용 로컬 앱입니다. 카드 UI, 일괄 제어, 분할 녹화, MP4 리먹싱, 기록, 로그, 시스템 트레이, 이전 설정 가져오기를 제공합니다. 현재 버전은 `0.2.0`입니다. 계정이 필요 없고 Cookie를 저장하지 않습니다.
+Reco Box는 라이브 방송을 자동 모니터링하고 녹화하는 Windows x64용 로컬 앱입니다. 카드 UI, 일괄 제어, 분할 녹화, MP4 리먹싱, 기록, 로그, 시스템 트레이, 이전 설정 가져오기를 제공합니다. 현재 버전은 `0.2.1`입니다. 계정이 필요 없고 Cookie를 저장하지 않습니다.
 
 ## 다운로드 및 설치
 
-Releases에서 `RecoBox-Setup-0.2.0.exe`와 `.sha256.txt`를 받으세요. 설치 프로그램은 서명되지 않았습니다. LiveMe용으로 검증된 최소 Node.js v24.20.0 LTS 런타임이 포함됩니다.
+Releases에서 `RecoBox-Setup-0.2.1.exe`와 `.sha256.txt`를 받으세요. 설치 프로그램은 서명되지 않았습니다. LiveMe용으로 검증된 최소 Node.js v24.20.0 LTS 런타임이 포함됩니다.
 
 ## 플랫폼
 

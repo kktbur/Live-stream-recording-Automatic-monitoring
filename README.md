@@ -6,14 +6,14 @@ Reco Box 是一款面向 Windows 的本地直播自动监控与录制软件。�
 
 软件无需 Reco Box 账号，也不会把直播间列表、录制记录或视频上传到 Reco Box 服务器。平台解析采用匿名模式，不导入账号 Cookie。
 
-> 当前为 `0.2.0` 早期测试版，仅面向 Windows x64。直播平台经常调整网页和接口，因此“已支持”不代表任何直播间都能永久稳定解析。
+> 当前为 `0.2.1` 早期测试版，仅面向 Windows x64。直播平台经常调整网页和接口，因此“已支持”不代表任何直播间都能永久稳定解析。
 
 ## 下载与安装
 
 在仓库右侧的 **Releases** 页面下载：
 
-- `RecoBox-Setup-0.2.0.exe`：Windows 标准安装包
-- `RecoBox-Setup-0.2.0.exe.sha256.txt`：安装包校验值
+- `RecoBox-Setup-0.2.1.exe`：Windows 标准安装包
+- `RecoBox-Setup-0.2.1.exe.sha256.txt`：安装包校验值
 
 安装前建议核对 SHA-256。安装包目前没有商业代码签名，Windows SmartScreen 可能显示“未知发布者”。
 
@@ -130,6 +130,12 @@ Reco Box 自有代码采用 [MIT License](LICENSE)。上游解析器、FFmpeg、
 ## 网络安全说明
 
 当前锁定的上游直播解析器对主要平台解析请求默认不校验 TLS 证书。这是上游为兼容部分反爬环境保留的设计，可能降低网络传输的抗中间人攻击能力；请仅在可信网络环境中使用。Reco Box 当前不会把解析到的临时直播地址写入日志。后续版本会逐个平台测试并逐步恢复证书校验，必要时只为特定请求保留兼容例外。
+
+## 版本 0.2.1
+
+- 统一项目版本、Python 包、PyInstaller、Inno Setup 安装器和十语言 README 的发布标识。
+- 在 Windows CI 中覆盖旧版安装器到新版覆盖安装、安装后 self-check、静默卸载和用户数据保留。
+- 为正式 Tag/手动发布流程加入 SHA-256 校验与 GitHub Artifact Attestation；普通 CI 不发布公开 Release。
 
 ## 版本 0.2.0
 

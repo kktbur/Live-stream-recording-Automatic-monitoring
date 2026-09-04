@@ -37,6 +37,8 @@ jobs:
       FFMPEG_ARCHIVE_SHA256: 9076e7ae97240a704a3c59d26401986ae29c7914a62213ec8c911aa8d0b06356
       NODE_ARCHIVE_URL: https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip
       NODE_ARCHIVE_SHA256: 6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba
+      PREVIOUS_INSTALLER_URL: https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/releases/download/v0.2.0/RecoBox-Setup-0.2.0.exe
+      PREVIOUS_INSTALLER_SHA256: 93ef84724582837e66a78c57e6da6d4eb7a4363171a4dbdf2129d1cbd01929bc
 
     steps:
       - name: Check out source
@@ -114,6 +116,17 @@ jobs:
           Copy-Item -LiteralPath (Join-Path $extractPath "node-v24.20.0-win-x64/node.exe") -Destination "runtime/node/node.exe"
           Copy-Item -LiteralPath (Join-Path $extractPath "node-v24.20.0-win-x64/LICENSE") -Destination "runtime/node/LICENSE.txt"
 
+      - name: Prepare pinned previous release installer
+        shell: pwsh
+        run: |
+          $previousInstaller = Join-Path $env:RUNNER_TEMP "RecoBox-Setup-0.2.0.exe"
+          Invoke-WebRequest -Uri $env:PREVIOUS_INSTALLER_URL -OutFile $previousInstaller
+          $actualHash = (Get-FileHash -LiteralPath $previousInstaller -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:PREVIOUS_INSTALLER_SHA256) {
+            throw "Previous installer SHA-256 mismatch: $actualHash"
+          }
+          "PREVIOUS_INSTALLER_PATH=$previousInstaller" >> $env:GITHUB_ENV
+
       - name: Check first-party source
         shell: pwsh
         run: uv run --locked ruff check src tests tools
@@ -189,6 +202,10 @@ jobs:
           $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $installerName" | Set-Content -Encoding ascii "$installer.sha256.txt"
           pwsh -NoProfile -File tools/check_version_consistency.ps1 -ExecutablePath "dist/Reco Box/RecoBox.exe" -InstallerPath $installer.Path
+
+      - name: Run installer install, upgrade, and uninstall smoke
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/test_installer.ps1 -PreviousInstallerPath $env:PREVIOUS_INSTALLER_PATH
 
       - name: Upload installer test artifact
         if: ${{ inputs.upload_artifact }}

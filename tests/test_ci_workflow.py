@@ -16,6 +16,8 @@ EXPECTED_ACTION_REFS = {
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
     "astral-sh/setup-uv": "20cfd1bf945f4377ade1205e4dbc17946fc9a30d",
     "actions/upload-artifact": "b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+    "actions/download-artifact": "70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3",
+    "actions/attest": "1e69f48acb82d1966a394da916b4c1698aa569d6",
 }
 
 
@@ -270,6 +272,14 @@ def test_windows_ci_installs_and_runs_from_locked_uv_environment() -> None:
     assert _run_text(steps["Run tests"]).strip() == (
         "uv run --locked pytest tests -q -p no:cacheprovider"
     )
+    assert "Get-FileHash" in _run_text(steps["Prepare pinned previous release installer"])
+    assert "PREVIOUS_INSTALLER_PATH" in _run_text(
+        steps["Prepare pinned previous release installer"]
+    )
+    assert _run_text(steps["Run installer install, upgrade, and uninstall smoke"]).strip() == (
+        "pwsh -NoProfile -File tools/test_installer.ps1 "
+        "-PreviousInstallerPath $env:PREVIOUS_INSTALLER_PATH"
+    )
     _assert_all_uv_runs_are_locked(steps)
 
     order = [
@@ -277,8 +287,17 @@ def test_windows_ci_installs_and_runs_from_locked_uv_environment() -> None:
         "Check uv lockfile",
         "Install project and development dependencies",
         "Read project version",
+        "Prepare verified FFmpeg runtime",
+        "Prepare verified Node.js runtime",
+        "Prepare pinned previous release installer",
         "Check first-party source",
         "Run tests",
+        "Build Windows application",
+        "Run packaged self-test",
+        "Install Inno Setup",
+        "Prepare pinned Inno Setup language files",
+        "Build ten-language installer and checksum",
+        "Run installer install, upgrade, and uninstall smoke",
     ]
     positions = [list(steps).index(name) for name in order]
     assert positions == sorted(positions)
@@ -305,10 +324,13 @@ def test_ci_is_read_only_and_only_uploads_when_called_for_a_release_candidate() 
     assert triggers["push"] == {"branches": ["main"]}
     assert "contents: read" in source
     assert "contents: write" not in source
+    assert "PREVIOUS_INSTALLER_SHA256" in source
+    assert "RecoBox-Setup-0.2.0.exe" in source
+    assert "Run installer install, upgrade, and uninstall smoke" in source
     assert steps["Upload installer test artifact"]["if"] == "${{ inputs.upload_artifact }}"
 
 
-def test_release_workflow_is_tag_or_manual_only_with_narrow_publish_permissions() -> None:
+def test_release_workflow_builds_attests_and_publishes_only_tag_or_manual() -> None:
     source = RELEASE_WORKFLOW.read_text(encoding="utf-8")
     workflow = yaml.safe_load(source)
     if not isinstance(workflow, dict):
@@ -321,12 +343,7 @@ def test_release_workflow_is_tag_or_manual_only_with_narrow_publish_permissions(
     assert set(triggers) == {"push", "workflow_dispatch"}
     assert triggers["push"] == {"tags": ["v*"]}
     assert set(triggers["workflow_dispatch"]["inputs"]) == {"release_tag"}
-    assert "release candidate" in triggers["workflow_dispatch"]["inputs"]["release_tag"][
-        "description"
-    ]
-    assert "publish" not in triggers["workflow_dispatch"]["inputs"]["release_tag"][
-        "description"
-    ]
+    assert "publish" in triggers["workflow_dispatch"]["inputs"]["release_tag"]["description"]
 
     build = jobs["build-release"]
     assert build["uses"] == "./.github/workflows/ci.yml"
@@ -339,7 +356,61 @@ def test_release_workflow_is_tag_or_manual_only_with_narrow_publish_permissions(
     }
     assert build["permissions"] == {"contents": "read"}
 
-    assert set(jobs) == {"build-release"}
-    assert "contents: write" not in source
-    assert "gh release create" not in source
+    attest = jobs["attest-release"]
+    assert attest["needs"] == "build-release"
+    assert attest["runs-on"] == "ubuntu-latest"
+    assert attest["permissions"] == {
+        "contents": "read",
+        "id-token": "write",
+        "attestations": "write",
+    }
+    attest_steps = {step["name"]: step for step in attest["steps"]}
+    assert attest_steps["Download release asset"]["uses"] == (
+        "actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3"
+    )
+    assert "sha256sum" in attest_steps["Verify release asset checksum"]["run"]
+    assert attest_steps["Generate binary provenance attestation"]["uses"] == (
+        "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6"
+    )
+    assert "RecoBox-Setup-*.exe" in attest_steps["Generate binary provenance attestation"][
+        "with"
+    ]["subject-path"]
+
+    publish = jobs["publish-release"]
+    assert publish["needs"] == "attest-release"
+    assert publish["runs-on"] == "ubuntu-latest"
+    assert publish["permissions"] == {"contents": "write"}
+    publish_steps = {step["name"]: step for step in publish["steps"]}
+    assert publish_steps["Download release asset"]["uses"] == (
+        "actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3"
+    )
+    publish_script = publish_steps["Create and publish release"]["run"]
+    assert "gh release create" in publish_script
+    assert "gh release edit" in publish_script
+    assert "--verify-tag" in publish_script
+    assert "--draft" in publish_script
+    assert "Refusing to replace an existing GitHub Release" in publish_script
+
+    assert set(jobs) == {"build-release", "attest-release", "publish-release"}
+    assert source.count("contents: write") == 1
+    assert "actions/attest@v4" not in source
     assert "pull_request" not in triggers
+
+
+def test_installer_smoke_covers_upgrade_uninstall_and_user_data_preservation() -> None:
+    source = (ROOT / "tools" / "test_installer.ps1").read_text(encoding="utf-8")
+
+    assert "PreviousInstallerPath" in source
+    assert "[Parameter(Mandatory = $true)]" in source
+    assert "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" in source
+    assert "RECO_BOX_DATA_DIR" in source
+    assert "reco_box.db" in source
+    assert "from reco_box.storage import Database" in source
+    assert "upgrade_sentinel_config" in source
+    assert "start_recording" in source
+    assert "list_recordings" in source
+    assert "status\"] == \"completed\"" in source
+    assert "Get-ChildItem -LiteralPath $Target -Filter \"unins*.exe\"" in source
+    assert "Start-Sleep -Milliseconds 250" in source
+    assert "Assert-PreservedUserData" in source
+    assert "self-check.json" in source

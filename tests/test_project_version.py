@@ -63,15 +63,11 @@ def test_release_build_surfaces_do_not_embed_a_release_version() -> None:
         ROOT / "tools" / "test_installer.ps1",
         ROOT / ".github" / "workflows" / "ci.yml",
     )
-    release_literals = (
-        r"MyAppVersion\s+['\"]\d+\.\d+\.\d+",
-        r"RecoBox-Setup-\d+\.\d+\.\d+",
-        r"install-test-\d+\.\d+\.\d+",
-    )
-
     for path in paths:
         source = path.read_text(encoding="utf-8")
-        assert all(not re.search(pattern, source) for pattern in release_literals), path
+        assert not re.search(r"MyAppVersion\s+['\"]\d+\.\d+\.\d+", source), path
+        assert f"RecoBox-Setup-{project_version_from_pyproject()}" not in source, path
+        assert f"install-test-{project_version_from_pyproject()}" not in source, path
 
 
 def test_release_build_surfaces_call_the_version_reader() -> None:

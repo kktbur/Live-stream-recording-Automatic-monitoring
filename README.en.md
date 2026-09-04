@@ -2,11 +2,11 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-Reco Box is a local Windows x64 application for automatic livestream monitoring and recording. It provides a card-based desktop UI, batch controls, segmented recording, MP4 remuxing, history, logs, a system tray, and one-click legacy configuration import. Current version: `0.2.0`. No Reco Box or platform account is required, and cookies are never stored.
+Reco Box is a local Windows x64 application for automatic livestream monitoring and recording. It provides a card-based desktop UI, batch controls, segmented recording, MP4 remuxing, history, logs, a system tray, and one-click legacy configuration import. Current version: `0.2.1`. No Reco Box or platform account is required, and cookies are never stored.
 
 ## Download and installation
 
-Download `RecoBox-Setup-0.2.0.exe` and its `.sha256.txt` file from Releases. The installer is unsigned, so SmartScreen may show an unknown publisher warning. It bundles a verified minimal Node.js v24.20.0 LTS runtime for LiveMe; users do not need to install Node.js.
+Download `RecoBox-Setup-0.2.1.exe` and its `.sha256.txt` file from Releases. The installer is unsigned, so SmartScreen may show an unknown publisher warning. It bundles a verified minimal Node.js v24.20.0 LTS runtime for LiveMe; users do not need to install Node.js.
 
 ## Platforms
 
