@@ -80,3 +80,16 @@ platform tokens, recordings and user configuration.
   that still use its shared `async_req` default remain outside this migration.
 - The adapter's regression tests use an injected offline client and do not claim
   that a live public room, CDN URL, or short recording was validated.
+
+## TLS follow-up: 2026-09-05 PR-08
+
+- PR-08 adds `src/reco_box/youtube.py`, a Reco Box-owned anonymous adapter for
+  the YouTube page and HLS manifest requests previously reached through the
+  pinned upstream resolver.
+- The adapter creates an `httpx.AsyncClient` with explicit proxy,
+  `follow_redirects`, `http2`, and `verify` settings. The default network policy
+  verifies each YouTube request; page redirects are restricted to YouTube Hosts
+  and manifest/variant URLs are restricted to HTTP(S).
+- The YouTube path does not accept or send Cookie or account credentials. Its
+  regression tests use an injected offline client and do not claim that a live
+  public room, dynamic CDN URL, or short recording was validated.

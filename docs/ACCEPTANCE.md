@@ -37,3 +37,24 @@ for platform-by-platform certificate-compatibility evidence.
 - Limitation: the focused suite uses an injected offline client. It does not establish
   current public-room availability, dynamic CDN reachability or a short recording.
 - Release boundary: no merge, Tag, formal Release or `main` modification is part of PR-07.
+
+## PR-08 current acceptance
+
+- Scope: YouTube page and HLS manifest requests only; the package version remains
+  `0.2.1`.
+- First-party request code: `src/reco_box/youtube.py` uses explicit HTTPX TLS policy,
+  proxy, HTTP/2 and manual redirect settings without account credentials or Cookie.
+- Local evidence: 31 focused tests passed; the full suite has 116 passed and 2
+  prerequisite-dependent failures; Ruff, compileall and `git diff --check` passed.
+- Protocol boundaries: YouTube page Hosts are enforced across redirects, manifest
+  and variant URLs require HTTP(S), and the existing quality index is preserved.
+- Remote Draft PR [#12](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/12)
+  is open/draft. Windows CI [#36](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33914674544)
+  passed lockfile checks, tests, Windows build, packaged self-check, ten-language installer
+  build, and installer install/upgrade/uninstall smoke; the diagnostics artifact is retained
+  for seven days.
+- Limitation: the focused suite uses an injected offline client. It does not establish
+  current public-room availability, dynamic CDN reachability, or a short recording.
+- A corrected follow-up Standards/Spec review did not return a final report, so independent
+  review remains open for maintainer acceptance.
+- Release boundary: no merge, Tag, formal Release or `main` modification is part of PR-08.

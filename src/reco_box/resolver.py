@@ -17,6 +17,7 @@ from .network import normalize_proxy
 from .network_policy import DEFAULT_NETWORK_POLICY, NetworkPolicy
 from .platforms import detect_platform
 from .resources import upstream_resource
+from .youtube import YouTubeResolver
 
 
 class UnsupportedPlatformError(ValueError):
@@ -72,6 +73,7 @@ class DouyinLiveRecorderResolver:
         runtime_path: Path | None = None,
         network_policy: NetworkPolicy | None = None,
         bilibili_resolver: BilibiliResolver | None = None,
+        youtube_resolver: YouTubeResolver | None = None,
     ):
         self._spider = spider_module
         self._stream = stream_module
@@ -79,6 +81,9 @@ class DouyinLiveRecorderResolver:
         self.runtime_path = Path(runtime_path or default_upstream_runtime_path())
         self.network_policy = network_policy or DEFAULT_NETWORK_POLICY
         self._bilibili_resolver = bilibili_resolver or BilibiliResolver(
+            network_policy=self.network_policy
+        )
+        self._youtube_resolver = youtube_resolver or YouTubeResolver(
             network_policy=self.network_policy
         )
 
@@ -134,6 +139,11 @@ class DouyinLiveRecorderResolver:
                 url, proxy_addr=proxy_addr, quality_code=quality_code
             )
             return normalize_payload(platform, payload)
+        if platform is Platform.YOUTUBE:
+            payload = await self._youtube_resolver.resolve(
+                url, proxy_addr=proxy_addr, quality_code=quality_code
+            )
+            return normalize_payload(platform, payload)
 
         spider = self._load_spider()
         if platform is Platform.DOUYIN:
@@ -149,9 +159,6 @@ class DouyinLiveRecorderResolver:
             payload = await self._load_stream().get_tiktok_stream_url(
                 raw, quality_code, proxy_addr
             )
-        elif platform is Platform.YOUTUBE:
-            raw = await spider.get_youtube_stream_url(url, proxy_addr=proxy_addr, cookies=None)
-            payload = await self._load_stream().get_stream_url(raw, quality_code, spec=True)
         elif platform is Platform.TAOBAO:
             raise AnonymousAccessUnavailableError(
                 tr(
