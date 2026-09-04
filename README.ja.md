@@ -2,11 +2,11 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-Reco Box は、ライブ配信を自動監視・録画する Windows x64 向けローカルアプリです。カード UI、一括操作、分割録画、MP4 リマックス、履歴、ログ、システムトレイ、旧設定のインポートを備えます。現在のバージョンは `0.2.0` です。アカウントは不要で、Cookie は保存しません。
+Reco Box は、ライブ配信を自動監視・録画する Windows x64 向けローカルアプリです。カード UI、一括操作、分割録画、MP4 リマックス、履歴、ログ、システムトレイ、旧設定のインポートを備えます。現在のバージョンは `0.2.1` です。アカウントは不要で、Cookie は保存しません。
 
 ## ダウンロードとインストール
 
-Releases から `RecoBox-Setup-0.2.0.exe` と `.sha256.txt` を取得してください。インストーラーは未署名です。LiveMe 用に検証済みの最小 Node.js v24.20.0 LTS ランタイムを同梱します。
+Releases から `RecoBox-Setup-0.2.1.exe` と `.sha256.txt` を取得してください。インストーラーは未署名です。LiveMe 用に検証済みの最小 Node.js v24.20.0 LTS ランタイムを同梱します。
 
 ## 対応プラットフォーム
 

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import ast
 import re
+import tomllib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from reco_box.localization import LANGUAGES
 
 ROOT = Path(__file__).resolve().parents[1]
+with (ROOT / "pyproject.toml").open("rb") as handle:
+    PROJECT_VERSION = tomllib.load(handle)["project"]["version"]
 NAVIGATION = (
     "[简体中文](README.md) | [繁體中文](README.zh-TW.md) | "
     "[English](README.en.md) | [Español](README.es.md) | "
@@ -33,7 +36,7 @@ def test_readmes_share_navigation_version_and_scope() -> None:
     for name in READMES:
         text = (ROOT / name).read_text(encoding="utf-8")
         assert NAVIGATION in text
-        assert "0.2.0" in text
+        assert PROJECT_VERSION in text
         assert "Twitch" in text
         assert "Shopee Live" in text
         assert "Roadmap" in text

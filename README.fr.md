@@ -2,11 +2,11 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-Reco Box est une application locale Windows x64 de surveillance et d’enregistrement automatiques des directs. Elle offre une interface en cartes, des commandes groupées, le découpage, le remuxage MP4, l’historique, les journaux, la zone de notification et l’import d’anciennes configurations. Version actuelle : `0.2.0`. Aucun compte n’est requis et aucun cookie n’est conservé.
+Reco Box est une application locale Windows x64 de surveillance et d’enregistrement automatiques des directs. Elle offre une interface en cartes, des commandes groupées, le découpage, le remuxage MP4, l’historique, les journaux, la zone de notification et l’import d’anciennes configurations. Version actuelle : `0.2.1`. Aucun compte n’est requis et aucun cookie n’est conservé.
 
 ## Téléchargement et installation
 
-Téléchargez `RecoBox-Setup-0.2.0.exe` et son fichier `.sha256.txt` depuis Releases. L’installeur n’est pas signé. Il intègre un environnement minimal Node.js v24.20.0 LTS vérifié pour LiveMe.
+Téléchargez `RecoBox-Setup-0.2.1.exe` et son fichier `.sha256.txt` depuis Releases. L’installeur n’est pas signé. Il intègre un environnement minimal Node.js v24.20.0 LTS vérifié pour LiveMe.
 
 ## Plateformes
 

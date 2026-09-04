@@ -2,11 +2,11 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-Reco Box ist eine lokale Windows-x64-Anwendung zur automatischen Überwachung und Aufzeichnung von Livestreams. Sie bietet Kartenansicht, Sammelsteuerung, Segmentierung, MP4-Remuxing, Verlauf, Protokolle, Infobereich und Import alter Konfigurationen. Aktuelle Version: `0.2.0`. Konten sind nicht nötig; Cookies werden nicht gespeichert.
+Reco Box ist eine lokale Windows-x64-Anwendung zur automatischen Überwachung und Aufzeichnung von Livestreams. Sie bietet Kartenansicht, Sammelsteuerung, Segmentierung, MP4-Remuxing, Verlauf, Protokolle, Infobereich und Import alter Konfigurationen. Aktuelle Version: `0.2.1`. Konten sind nicht nötig; Cookies werden nicht gespeichert.
 
 ## Download und Installation
 
-`RecoBox-Setup-0.2.0.exe` und die zugehörige `.sha256.txt` unter Releases herunterladen. Das Installationspaket ist nicht signiert. Für LiveMe enthält es eine geprüfte minimale Node.js-v24.20.0-LTS-Laufzeit.
+`RecoBox-Setup-0.2.1.exe` und die zugehörige `.sha256.txt` unter Releases herunterladen. Das Installationspaket ist nicht signiert. Für LiveMe enthält es eine geprüfte minimale Node.js-v24.20.0-LTS-Laufzeit.
 
 ## Plattformen
 
