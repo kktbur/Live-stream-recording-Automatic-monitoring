@@ -10,7 +10,6 @@ from reco_box.bilibili import (
     MASTER_INFO_URL,
     ROOM_INIT_URL,
     ROOM_PLAY_INFO_URL,
-    BilibiliAnonymousAccessUnavailableError,
     BilibiliResolver,
 )
 from reco_box.domain import Platform
@@ -308,14 +307,34 @@ def test_bilibili_resolver_supports_b23_short_link_redirect() -> None:
     assert captured["calls"][2][0] == ROOM_INIT_URL
 
 
-def test_bilibili_resolver_reports_anonymous_access_denied() -> None:
+def test_bilibili_resolver_treats_anonymous_access_denied_as_offline() -> None:
     captured: dict[str, Any] = {}
     resolver = BilibiliResolver(
         client_factory=_factory_for([{"code": -101, "data": {}}], captured),
     )
 
-    with pytest.raises(BilibiliAnonymousAccessUnavailableError, match="anonymous access"):
-        asyncio.run(resolver.resolve("https://live.bilibili.com/6"))
+    result = asyncio.run(resolver.resolve("https://live.bilibili.com/6"))
+
+    assert result == {
+        "anchor_name": "",
+        "live_status": False,
+        "room_url": "https://live.bilibili.com/6",
+    }
+
+
+@pytest.mark.parametrize("status_code", [403, 500])
+def test_bilibili_resolver_treats_http_errors_as_offline(status_code: int) -> None:
+    captured: dict[str, Any] = {}
+    resolver = BilibiliResolver(
+        client_factory=_factory_for(
+            [FakeResponse({}, url=ROOM_INIT_URL, status_code=status_code)], captured
+        ),
+    )
+
+    result = asyncio.run(resolver.resolve("https://live.bilibili.com/6"))
+
+    assert result["live_status"] is False
+    assert result["room_url"] == "https://live.bilibili.com/6"
 
 
 def test_bilibili_resolver_reports_malformed_api_response() -> None:
@@ -324,15 +343,16 @@ def test_bilibili_resolver_reports_malformed_api_response() -> None:
         client_factory=_factory_for([[]], captured),
     )
 
-    with pytest.raises(TypeError, match="non-object JSON"):
-        asyncio.run(resolver.resolve("https://live.bilibili.com/6"))
+    result = asyncio.run(resolver.resolve("https://live.bilibili.com/6"))
+
+    assert result["live_status"] is False
 
 
 def test_bilibili_resolver_rejects_room_urls_without_numeric_id() -> None:
     captured: dict[str, Any] = {}
     resolver = BilibiliResolver(client_factory=_factory_for([], captured))
 
-    with pytest.raises(ValueError, match="numeric room id"):
-        asyncio.run(resolver.resolve("https://live.bilibili.com/room/demo"))
+    result = asyncio.run(resolver.resolve("https://live.bilibili.com/room/demo"))
 
+    assert result["live_status"] is False
     assert "client" not in captured

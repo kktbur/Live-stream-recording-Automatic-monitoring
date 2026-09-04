@@ -1,11 +1,11 @@
 # PR-07：Bilibili 第一方 TLS 迁移
 
-- 状态：本地实施和专项验证完成；独立审查与远程 Draft PR 待完成
+- 状态：本地实施、专项验证和第一轮审查问题修正完成；最终复审与远程 Draft PR 待完成
 - 路线目标版本：`0.2.2`（本 PR 不修改当前包版本 `0.2.1`）
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
 - 本地分支：`codex/0.2.2-07-bilibili-tls`
 - 本地基线：PR-06 本地提交 `51ead3b6fae2dcd9ff105855b370ac71602d060f`
-- 本地实现提交：`550f896eae3ffdc36fb4bb57d986ffe28afd2535`
+- 本地实现提交：`ff3f24b`
 - 远程恢复参考：PR-06 head `87e6d04b2d84295c9df429b50e64165d9258bfc1`
 
 ## 范围
@@ -35,14 +35,16 @@ Bilibili 房间状态、主播信息、标题和播放地址请求不再继承�
 
 ## 本地验证
 
-- Bilibili、Resolver、网络策略专项测试：`26 passed`。
-- 全量测试：`100 passed、2 failed、5 warnings`；两个失败仍是本机没有既有
+- Bilibili、Resolver、网络策略专项测试：`28 passed`。
+- 全量测试：`102 passed、2 failed、5 warnings`；两个失败仍是本机没有既有
   `runtime/ffmpeg/ffmpeg.exe`，分别影响预览解码和连带 self-check 前置项，不归因于
   PR-07；排除这两项后其余测试通过。
 - `ruff check src tests`：通过。
 - `python -m compileall -q src tests`：通过。
 - `git diff --check`：通过。
 - `uv lock --check --no-cache --python .venv-pr07/Scripts/python.exe`：通过。
+- API 匿名拒绝、HTTP 403/500 和非对象 JSON 响应保持为离线结果；后续可靠性阶段再
+  引入可观测的错误分类与重试策略。
 - 本轮尚未用真实公开直播间做网络/短时录制验证；该项必须由后续公开样本流程和
   Windows CI/人工验收单独确认。
 
@@ -54,7 +56,7 @@ Bilibili 房间状态、主播信息、标题和播放地址请求不再继承�
 - [x] 请求头不包含 Cookie；文档没有写入临时播放 URL 或凭据。
 - [x] 匿名访问拒绝、HTTP 异常和非对象 JSON 响应有回归覆盖。
 - [x] 其他平台和锁定上游源码没有被本轮批量改写。
-- [ ] 独立 Standards/Spec 审查完成并记录结论。
+- [ ] 最终独立 Standards/Spec 复审完成并记录结论。
 - [ ] Draft PR 和远程 Windows CI 完成并记录远程证据。
 
 ## 恢复与下一步

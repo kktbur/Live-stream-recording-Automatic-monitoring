@@ -26,7 +26,8 @@ for platform-by-platform certificate-compatibility evidence.
 - Scope: Bilibili only; the package version remains `0.2.1`.
 - First-party request code: `src/reco_box/bilibili.py` uses explicit HTTPX TLS policy,
   proxy, HTTP/2 and redirect settings without account credentials or Cookie.
-- Local evidence: 26 focused tests passed; Ruff, compileall and `git diff --check` passed.
+- Local evidence: 28 focused tests passed; the full suite has 102 passed and 2
+  prerequisite-dependent failures; Ruff, compileall and `git diff --check` passed.
 - Limitation: the focused suite uses an injected offline client. It does not establish
   current public-room availability, dynamic CDN reachability or a short recording.
 - Release boundary: no merge, Tag, formal Release or `main` modification is part of PR-07.

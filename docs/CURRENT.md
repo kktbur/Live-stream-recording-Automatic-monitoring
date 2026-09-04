@@ -23,7 +23,9 @@
   settings explicitly; the default policy verifies `api.live.bilibili.com`.
 - The adapter has no Cookie or account-credential input and does not log dynamic CDN URLs.
 - Offline protocol tests cover legacy and modern playback paths, quality selection,
-  proxy forwarding, short-link redirects, anonymous-access errors and exact-host TLS policy behavior.
+  proxy forwarding, short-link redirects, HTTP/anonymous-access errors and exact-host TLS policy behavior.
+- Expected anonymous request failures retain the upstream public contract and normalize to an
+  offline result; detailed retry/error taxonomy remains a later reliability-stage change.
 - Public-room network and short-recording validation remain outstanding; PR-07 does not
   close Issue #1 globally.
 

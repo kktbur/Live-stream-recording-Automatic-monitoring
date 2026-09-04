@@ -18,7 +18,7 @@ ROOM_PLAY_INFO_URL = f"{BILIBILI_API_ORIGIN}/xlive/web-room/v2/index/getRoomPlay
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 MAX_REDIRECTS = 5
 
-QUALITY_CODES = {
+BILIBILI_QN_BY_QUALITY = {
     "OD": "10000",
     "BD": "400",
     "UHD": "250",
@@ -54,6 +54,28 @@ class BilibiliResolver:
         url: str,
         proxy_addr: str | None = None,
         quality_code: str = "OD",
+    ) -> dict[str, Any]:
+        try:
+            return await self._resolve(url, proxy_addr, quality_code)
+        except (
+            BilibiliResolverError,
+            httpx.HTTPError,
+            TypeError,
+            ValueError,
+            KeyError,
+            IndexError,
+        ):
+            # Keep the pinned resolver's public contract: an unavailable or
+            # malformed anonymous response is treated as an offline room.
+            # Detailed failure classification belongs to the later reliability
+            # work and must not change this platform migration's state semantics.
+            return {"anchor_name": "", "live_status": False, "room_url": url}
+
+    async def _resolve(
+        self,
+        url: str,
+        proxy_addr: str | None,
+        quality_code: str,
     ) -> dict[str, Any]:
         transport = _BilibiliTransport(
             network_policy=self.network_policy,
@@ -103,7 +125,9 @@ class BilibiliResolver:
         room_id: str,
         quality_code: str,
     ) -> str:
-        qn = QUALITY_CODES.get(quality_code, QUALITY_CODES["OD"])
+        qn = BILIBILI_QN_BY_QUALITY.get(
+            quality_code, BILIBILI_QN_BY_QUALITY["OD"]
+        )
         legacy_payload = await transport.get_json(
             LEGACY_PLAY_URL,
             {"cid": room_id, "qn": qn, "platform": "web"},
