@@ -91,6 +91,8 @@ from this durable product document.
   deterministic classification; error text is bounded and sensitive details are removed.
 - Local PR-10 focused tests are `84 passed`; the full suite is `171 total, 169 passed、2 failed、5 warnings`,
   with the same missing-FFmpeg prerequisite recorded in the PR-10 maintenance record.
-- Current branch is `codex/0.3.0-02-error-taxonomy`, local code fixed point `a581da1`; final independent
-  review, remote Draft PR and Windows CI remain to be published and verified. The next scope after acceptance is
-  `0.3.0-04` Stall Detection.
+- Current branch is `codex/0.3.0-02-error-taxonomy`, local code fixed point `a581da1`; remote Draft PR
+  [#14](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/14) is open/draft and
+  Windows CI [#41](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33929815223)
+  passed all configured stages. Two later independent review agents timed out without a final report, so
+  owner acceptance remains open. The next scope after acceptance is `0.3.0-04` Stall Detection.

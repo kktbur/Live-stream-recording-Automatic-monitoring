@@ -1,7 +1,7 @@
 # PR-10：Resolver 与录制错误类型分类
 
-- 状态：本地实现、专项验证、审查问题修正和项目知识更新完成；最终独立 Standards/Spec
-  审查、远程 Draft PR 和 Windows CI 待完成。
+- 状态：本地实现、专项验证、审查问题修正、Draft PR 和远程 Windows CI 完成；最终独立
+  Standards/Spec 审查代理未返回，等待负责人验收。
 - 路线目标：`0.3.0-03` 错误类型分类；本 PR 不修改当前包版本 `0.2.1`。
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`。
 - 本地分支：`codex/0.3.0-02-error-taxonomy`。
@@ -39,12 +39,23 @@
 
 ## 本地验证
 
-- 错误分类、Resolver Worker、监控、录制转换和既有 Resolver 专项测试：`77 passed`。
+- 错误分类、Resolver Worker、监控、录制转换和既有 Resolver 专项测试：`84 passed`。
 - 全量测试：`171` 项中 `169 passed、2 failed、5 warnings`；两项失败仍是本机缺少既有
   `runtime/ffmpeg/ffmpeg.exe`，影响预览解码和连带 self-check 前置项，不归因于 PR-10。
 - `ruff check src tests`：通过。
 - `python -m compileall -q src tests`：通过。
 - `git diff --check`：通过。
+
+## 远程验证
+
+- Draft PR [#14](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/14)
+  仍为 open/draft，head 为 `5f62c48149f25d27d3a556f668f2ed5ef60f9f74`，目标为 PR-09 的
+  文档同步分支；未合并。
+- Windows CI [#41](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33929815223)
+  已成功完成 lockfile、测试、Windows 构建、自检、安装/升级/卸载冒烟和诊断物上传阶段。
+- 诊断物 `RecoBox-installer-e2e-diagnostics-33929815223`（artifact `9958232745`）仍未过期，
+  SHA-256 为 `acde00b5b4ba47e67ccb2067b1f9aea22dc994b733033f6407d9fb2cb6e67486`，保留至
+  2026-09-11。
 
 ## 证据边界
 
@@ -60,12 +71,13 @@
 - [x] 错误展示、事件和持久化消息做长度限制与 URL、查询参数、Cookie、授权信息清理。
 - [x] 现有 Bilibili/YouTube 匿名失败的 offline 合约和 PR-09 统一重试节奏未改变。
 - [x] 专项/全量测试、Ruff、compileall 和差异检查完成；FFmpeg 前置限制已记录。
-- [ ] 独立 Standards/Spec 审查、Draft PR 和远程 Windows CI 完成。
+- [ ] 独立 Standards/Spec 审查完成；本轮两个后续审查代理均未在等待窗口内返回最终报告。
+- [x] Draft PR 和远程 Windows CI 完成；CI #41 已成功。
 
 ## 恢复与下一步
 
 如果分类接线引起回归，只回退本 PR 的 `errors.py`、Resolver/监控/录制接线、测试和文档，
-恢复到 PR-09 远程 head；不修改 `main`，不合并、不创建 Tag 或正式 Release。通过本 PR 后，
+恢复到 PR-09 远程 head；不修改 `main`，不合并、不创建 Tag 或正式 Release。负责人验收后，
 下一项严格进入 `0.3.0-04` Stall Detection。
 
 ## 来源

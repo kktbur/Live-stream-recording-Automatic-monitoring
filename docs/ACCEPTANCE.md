@@ -96,7 +96,9 @@ for platform-by-platform certificate-compatibility evidence.
 - Focused taxonomy/monitor/recording/Resolver/storage tests are `84 passed`; the full suite is
   `171 total, 169 passed、2 failed、5 warnings`.
   The two failures depend on the local missing `runtime/ffmpeg/ffmpeg.exe` prerequisite.
-- `ruff check src tests`, compileall, and `git diff --check` passed. Final independent review,
-  Draft PR, and remote Windows CI remain the next acceptance gates for this PR.
+- `ruff check src tests`, compileall, and `git diff --check` passed. Draft PR [#14](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/14)
+  is open/draft, and Windows CI [#41](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33929815223)
+  passed the configured lockfile, test, build, self-check, installer, and diagnostics stages. The later
+  independent review agents timed out without a final report; owner acceptance remains open.
 - Explicit non-goals: no change to PR-09 retry timing, no stall detection, RecordingSession,
   recovery state machine, offline hysteresis, crash recovery, or pressure/fault injection.
