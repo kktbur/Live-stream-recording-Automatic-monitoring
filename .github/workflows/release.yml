@@ -1,0 +1,29 @@
+name: Windows Release Candidate
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing tag to build as a release candidate, for example v0.2.1.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    name: Build release candidate
+    uses: ./.github/workflows/ci.yml
+    with:
+      upload_artifact: true
+      checkout_ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
+    permissions:
+      contents: read

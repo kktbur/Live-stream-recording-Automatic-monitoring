@@ -10,3 +10,4 @@ cross-check evidence.
 | [Live samples](platform-live-samples-0.2.0.md) | Platform sample evidence | ACTIVE | Inspect sample evidence |
 | [PR-02 maintenance record](maintenance/2026-09-04-pr-02-single-source-version.md) | Version-source maintenance scope and recovery point | ACTIVE | Review PR-02 changes |
 | [PR-03 maintenance record](maintenance/2026-09-04-pr-03-uv-ci.md) | Locked uv CI maintenance scope and acceptance gate | ACTIVE | Review PR-03 changes |
+| [PR-04 maintenance record](maintenance/2026-09-04-pr-04-actions-release-separation.md) | Action SHA pinning and release-candidate boundary | ACTIVE | Review PR-04 changes |
