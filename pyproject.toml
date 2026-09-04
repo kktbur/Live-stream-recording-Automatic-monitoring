@@ -27,6 +27,7 @@ dev = [
   "ruff>=0.9,<1",
   "PyInstaller>=6.11,<7",
   "Pillow>=11,<12",
+  "PyYAML>=6.0,<7",
 ]
 
 [project.scripts]
