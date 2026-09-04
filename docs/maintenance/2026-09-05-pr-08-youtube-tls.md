@@ -1,12 +1,14 @@
 # PR-08：YouTube 第一方 TLS 迁移
 
-- 状态：本地实施、专项验证和文档更新完成；独立审查、远程 Draft PR、Windows CI
-  和公开样本验证待完成
+- 状态：本地实施、专项验证、远程 Draft PR 和 Windows CI 完成；修正后独立审查
+  仍未取得最终报告，公开样本验证待完成
 - 路线目标版本：`0.2.2`（本 PR 不修改当前包版本 `0.2.1`）
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
 - 本地分支：`codex/0.2.2-08-youtube-tls`
 - 本地恢复点：PR-07 本地最终工作树 `b105823`；远程 PR-07 最终 head
   `96a770d44dbc6526ebde06cbc8f4eb33d25ea805`
+- 远程 Draft PR：[PR-08 #12](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/12)，
+  head `8c9bdec00325f3b94f1a8b756b991bb34de96199`
 
 ## 范围
 
@@ -44,6 +46,14 @@
   逐跳 TLS 策略、离开 YouTube Host 的重定向、HTTP 403/500、畸形页面、空清单和非
   HTTP(S) 清单地址。
 
+## 远程验证
+
+- Windows CI [#36](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33914674544)：
+  通过锁文件检查、依赖安装、全量测试、Windows 应用构建、打包 self-check、十语言
+  安装器构建、安装/升级/卸载冒烟和诊断产物上传；普通 PR 安装器测试产物按设计跳过。
+- 诊断产物为 `RecoBox-installer-e2e-diagnostics-33914674544`，保留至
+  `2026-09-11`；该产物只用于安装器诊断，不包含正式 Release。
+
 ## 证据边界
 
 本轮测试使用注入式离线 HTTP 客户端，不访问真实 YouTube 页面、HLS 清单、动态 CDN 或
@@ -58,8 +68,9 @@
 - [x] 请求头不包含 Cookie；非 HTTP(S) 清单地址和离开 YouTube Host 的页面重定向被拒绝。
 - [x] 匿名拒绝、HTTP 异常和结构异常归一化为既有离线结果，不改变监控状态机语义。
 - [x] 其他平台和锁定上游源码没有被本轮批量改写。
-- [ ] 独立 Standards/Spec 审查完成并记录最终结论。
-- [ ] Draft PR 和远程 Windows CI 完成并记录远程证据。
+- [ ] 独立 Standards/Spec 审查完成并记录最终结论；修正后的跟进审查未返回最终报告，
+  因此不把它标为已完成。
+- [x] Draft PR 和远程 Windows CI 完成并记录远程证据。
 - [ ] 真实公开 YouTube 房间、动态清单和短时录制完成单独验证。
 
 ## 恢复与下一步
@@ -68,5 +79,5 @@
 恢复到 PR-07 工作树，不改写 PR-07、PR-06 或 `main`。远程发布保持 Draft，不创建
 Tag、正式 Release 或合并 Pull Request。
 
-下一步应先完成本 PR 的独立审查、Windows CI 和公开样本验收；通过后再按路线继续
+下一步应先取得可复核的独立审查最终报告，并单独完成公开样本验收；通过后再按路线继续
 0.3.x 可靠性阶段。YouTube 迁移不等于 Issue #1 整体完成。

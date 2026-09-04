@@ -51,6 +51,8 @@ from this durable product document.
 - Offline protocol tests cover live/offline page responses, HLS bandwidth ordering,
   quality selection, `youtu.be` redirects, per-hop TLS policy, anonymous HTTP
   failures and malformed responses.
-- The local implementation and focused tests are complete; independent review,
-  Draft PR, Windows CI, public-room/CDN reachability and short-recording validation
+- The local implementation and focused tests are complete. Draft PR [#12](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/12)
+  remains open/draft, and Windows CI [#36](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33914674544)
+  passed the remote validation stages. A corrected follow-up independent review did not
+  return a final report; public-room/CDN reachability and short-recording validation also
   remain outstanding. PR-08 does not close Issue #1 globally.

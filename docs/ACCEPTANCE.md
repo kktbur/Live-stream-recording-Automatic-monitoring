@@ -48,8 +48,13 @@ for platform-by-platform certificate-compatibility evidence.
   prerequisite-dependent failures; Ruff, compileall and `git diff --check` passed.
 - Protocol boundaries: YouTube page Hosts are enforced across redirects, manifest
   and variant URLs require HTTP(S), and the existing quality index is preserved.
+- Remote Draft PR [#12](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/12)
+  is open/draft. Windows CI [#36](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33914674544)
+  passed lockfile checks, tests, Windows build, packaged self-check, ten-language installer
+  build, and installer install/upgrade/uninstall smoke; the diagnostics artifact is retained
+  for seven days.
 - Limitation: the focused suite uses an injected offline client. It does not establish
   current public-room availability, dynamic CDN reachability, or a short recording.
-- Independent Standards/Spec review and remote Windows CI are still required before
-  this PR can be considered ready for maintainer acceptance.
+- A corrected follow-up Standards/Spec review did not return a final report, so independent
+  review remains open for maintainer acceptance.
 - Release boundary: no merge, Tag, formal Release or `main` modification is part of PR-08.
