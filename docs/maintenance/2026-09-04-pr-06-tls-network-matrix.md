@@ -1,13 +1,13 @@
 # PR-06：TLS 网络矩阵与第一方策略接入
 
-- 状态：本地实施、验证和审查修正完成；远程 Draft PR #10 已发布，Windows CI #29 已通过
+- 状态：本地实施、验证和审查修正完成；远程 Draft PR #10 已发布，Windows CI #30 已通过
 - 路线目标版本：`0.2.2`（本 PR 不提前修改项目版本号，当前包版本仍为 `0.2.1`）
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
 - 基线：PR-05 远程 head `04ad3eb8634e8f0595f09353b4737fcb3481f79f`
 - 预期分支：`codex/0.2.2-06-tls-network-matrix`
 - 远程 Draft PR：[PR #10](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/10)
-- 远程验收：Windows CI [#29](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33895281848) 在远程 head
-  `5f8dfbb0d97f7aaff51d773870365207b7f221d0` 上通过；安装器安装、升级、卸载冒烟和诊断产物上传均成功。
+- 远程验收：Windows CI [#30](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33896119226) 在文档同步 head
+  `a205d81dba727cd528595676193e335b31fbd7f9` 上通过；安装器安装、升级、卸载冒烟和诊断产物上传均成功。
 - 备份方式：保留本地 PR-05 分支提交 `2b3dfd14c9da4149dcd6c49bc9521f48f5a79d12` 和远程 PR-05 head 作为恢复快照；本轮不接触用户数据库、录制文件或构建产物。
 
 ## 范围
