@@ -20,7 +20,9 @@ cross-check evidence.
 | [PR-05 maintenance record](maintenance/2026-09-04-pr-05-installer-e2e-attestation.md) | Installer upgrade/uninstall E2E and release provenance boundary | ACTIVE | Review PR-05 changes |
 | [PR-06 maintenance record](maintenance/2026-09-04-pr-06-tls-network-matrix.md) | TLS network matrix and first-party policy boundary | ACTIVE | Review PR-06 changes |
 | [PR-07 maintenance record](maintenance/2026-09-05-pr-07-bilibili-tls.md) | Bilibili first-party TLS migration and anonymous request boundary | ACTIVE | Review PR-07 changes |
+| [PR-08 maintenance record](maintenance/2026-09-05-pr-08-youtube-tls.md) | YouTube first-party TLS migration and anonymous request boundary | ACTIVE | Review PR-08 changes |
 | [Platform Network Security Matrix](platform-network-security.md) | Endpoint inventory, TLS status, and anonymous-access boundaries | ACTIVE | Plan platform-by-platform TLS migration |
 | [ADR-20260904-tls-network-policy](decisions/ADR-20260904-tls-network-policy.md) | Exact-host TLS exception policy | ACTIVE | Change first-party network requests |
 | [ADR-20260905-bilibili-tls-policy](decisions/ADR-20260905-bilibili-tls-policy.md) | Bilibili first-party request boundary | ACTIVE | Change Bilibili network requests |
+| [ADR-20260905-youtube-tls-policy](decisions/ADR-20260905-youtube-tls-policy.md) | YouTube first-party request boundary | ACTIVE | Change YouTube network requests |
 | [0.2.1 release notes](../RELEASE_NOTES_0.2.1.md) | Version 0.2.1 maintenance and release boundary | ACTIVE | Review the candidate release scope |

@@ -16,7 +16,7 @@
 
 | 状态 | 含义 |
 | --- | --- |
-| 第一方已验证 | Reco Box 自己控制的请求明确传入 `verify=True`；截至 PR-07 覆盖 TwitCasting 和 Bilibili 的匿名 API 请求。 |
+| 第一方已验证 | Reco Box 自己控制的请求明确传入 `verify=True`；截至 PR-08 覆盖 TwitCasting、Bilibili 和 YouTube 的匿名请求。 |
 | 上游默认未迁移 | 请求经锁定上游的 `async_req`，当前默认 `verify=False`；不能宣称已恢复 TLS 校验。 |
 | 直接客户端默认校验 | 上游直接创建 `httpx.AsyncClient` 且未覆盖 `verify`，按 HTTPX 默认行为校验；仍需平台公开样本验证。 |
 | 明文 HTTP | URL 本身是 `http://`，没有 TLS 证书可校验；后续需单独决定是否能移除或替换。 |
@@ -31,7 +31,7 @@
 | Bilibili | `api.live.bilibili.com`；短链接入口 `b23.tv` | 第一方 `BilibiliResolver`：`room_init`、`Master/info`、`getH5InfoByRoom`、旧版 `playUrl`，失败时回退 `getRoomPlayInfo`；短链接逐跳解析 | 匿名、无 Cookie | 第一方已验证；默认 `verify=True` | 是，HTTP/HTTPS 且不含凭据 | 离线协议测试通过；公开样本/短录制待验证 |
 | 小红书 | `www.xiaohongshu.com`、`app.xhs.cn`；媒体可能为 `live-source-play.xhscdn.com` | 上游 `async_req` | 仅匿名解析 | 上游默认未迁移；部分媒体地址可能为明文 HTTP | 是，传入 `proxy_addr` | 静态盘点；公开样本待验证 |
 | TikTok | 输入页面 `www.tiktok.com` / `tiktok.com`；播放 Host 从 `LiveRoom.liveRoom.streamData` 动态返回 | 页面请求经上游 `async_req`；播放地址由上游 `stream.py` 解析 | 匿名、不登录 | 上游默认未迁移 | 是，传入 `proxy_addr` | 静态盘点；地区和公开样本待验证 |
-| YouTube | 输入页面 `youtube.com` / `youtu.be`；播放 Host 从 `streamingData.hlsManifestUrl` 动态返回 | 页面请求和 HLS 清单请求经上游 `async_req` | 仅公开匿名直播 | 上游默认未迁移 | 是，传入 `proxy_addr` | 静态盘点；公开样本待验证 |
+| YouTube | 输入页面 `youtube.com` / `youtu.be`；播放 Host 从 `streamingData.hlsManifestUrl` 动态返回 | 第一方 `YouTubeResolver`：页面播放器响应和 HLS 清单逐跳请求 | 仅公开匿名直播、无 Cookie | 第一方已验证；默认 `verify=True` | 是，HTTP/HTTPS 且不含凭据 | 离线协议测试通过；公开样本/短录制待验证 |
 | 京东 | `lives.jd.com`、`api.m.jd.com` | 上游 `async_req` | 公开匿名解析 | 上游默认未迁移 | 是，传入 `proxy_addr` | 静态盘点；重定向、API 和播放地址待验证 |
 | 淘宝 | `h5api.m.taobao.com` | Reco Box 在 Resolver 中拒绝调用 | 不调用 | 不调用 | 不调用 | 设计边界已测试；不做登录验证 |
 | Twitch | `gql.twitch.tv`、`usher.ttvnw.net` | 上游 `async_req`；播放地址动态返回 | 仅公开频道 | 上游默认未迁移 | 是，传入 `proxy_addr` | 静态盘点；公开样本待验证 |
@@ -62,7 +62,20 @@
    不固化到代码、日志或维护文档。
 4. 本轮测试是注入式离线协议测试，覆盖旧版播放接口、新版回退、质量选择、代理、短链接、
    HTTP/匿名错误的离线回退、匿名请求头和精确 Host 例外；它不等同于当前公开直播间的实网
-   可用性验证，因此 Issue #1 仍未整体关闭。
+ 可用性验证，因此 Issue #1 仍未整体关闭。
+
+## PR-08 结论：YouTube
+
+1. `src/reco_box/youtube.py` 接管 YouTube 页面和 HLS 清单请求，不再调用锁定上游的
+   `async_req(..., verify=False)` 默认路径。
+2. 第一方 `httpx.AsyncClient` 明确接收 `verify=self.network_policy.verify_for(...)`、
+   代理、`http2=True` 和手动重定向设置；页面重定向限制在 YouTube Host，清单和变体
+   地址限制为 HTTP(S)。
+3. 适配器不接收、不生成、不发送 Cookie 或账号凭据；播放地址是平台响应中的动态结果，
+   不固化到代码、日志或维护文档。
+4. 本轮测试是注入式离线协议测试，覆盖页面/清单、带宽排序、质量选择、`youtu.be`
+   重定向、逐跳 TLS、HTTP/匿名错误和结构异常；它不等同于当前公开直播间的实网可用性
+   验证，因此 Issue #1 仍未整体关闭。
 
 ## 来源
 
