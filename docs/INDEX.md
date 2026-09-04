@@ -1,4 +1,4 @@
-N»ž# Reco Box repository documentation index
+# Reco Box repository documentation index
 
 This is the navigation entry for repository-maintained documentation. The
 outer raco box project index contains the broader maintenance plan and
