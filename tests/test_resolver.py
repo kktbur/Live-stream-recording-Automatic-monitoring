@@ -51,29 +51,22 @@ def test_resolver_never_passes_account_credentials() -> None:
 def test_bilibili_uses_room_info_and_selected_quality() -> None:
     captured = {}
 
-    async def get_bilibili_room_info(url, proxy_addr=None, cookies=None):
-        captured.update(url=url, proxy_addr=proxy_addr, cookies=cookies)
-        return {"anchor_name": "主播", "live_status": True, "room_url": url}
-
-    async def get_bilibili_stream_url(payload, quality, proxy_addr, cookies):
-        captured.update(quality=quality, stream_cookies=cookies)
+    async def resolve_bilibili(url, proxy_addr=None, quality_code=""):
+        captured.update(url=url, proxy_addr=proxy_addr, quality=quality_code)
         return {
-            "anchor_name": payload["anchor_name"],
+            "anchor_name": "主播",
             "is_live": True,
             "record_url": "https://cdn.example.com/live.flv",
         }
 
     resolver = DouyinLiveRecorderResolver(
-        spider_module=SimpleNamespace(get_bilibili_room_info=get_bilibili_room_info),
-        stream_module=SimpleNamespace(get_bilibili_stream_url=get_bilibili_stream_url),
+        bilibili_resolver=SimpleNamespace(resolve=resolve_bilibili),
     )
     result = asyncio.run(resolver.resolve("https://live.bilibili.com/6", quality="超清"))
 
     assert result.streamer_name == "主播"
     assert result.stream_urls == ("https://cdn.example.com/live.flv",)
     assert captured["quality"] == "UHD"
-    assert captured["cookies"] is None
-    assert captured["stream_cookies"] is None
 
 
 def test_page_url_is_never_treated_as_media_stream() -> None:

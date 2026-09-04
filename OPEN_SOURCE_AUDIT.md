@@ -66,3 +66,17 @@ platform tokens, recordings and user configuration.
 - The source logo retained an Adobe XMP metadata block in the 0.1.3 release;
   it contains editing timestamps and document identifiers but no user path or
   account identifier. The 0.1.4 source asset removes that unnecessary metadata.
+
+## TLS follow-up: 2026-09-05
+
+- PR-07 adds `src/reco_box/bilibili.py`, a Reco Box-owned anonymous adapter for
+  the Bilibili room metadata and playback endpoints previously reached through
+  the pinned upstream resolver.
+- The adapter creates an `httpx.AsyncClient` with explicit proxy,
+  `follow_redirects`, `http2`, and `verify` settings. The default network policy
+  verifies `api.live.bilibili.com`; no Cookie or account credential is accepted
+  or sent by this path.
+- The old upstream source remains pinned and unchanged. Other exposed platforms
+  that still use its shared `async_req` default remain outside this migration.
+- The adapter's regression tests use an injected offline client and do not claim
+  that a live public room, CDN URL, or short recording was validated.

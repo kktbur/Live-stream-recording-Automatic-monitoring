@@ -18,9 +18,10 @@ default for most of its main asynchronous platform requests. This compatibility
 behavior can reduce protection against man-in-the-middle tampering of resolver
 responses and remains a medium-risk limitation. Use Reco Box on a trusted
 network. PR-06 adds a first-party policy with verification enabled by default
-and applies it to Reco Box's anonymous TwitCasting requests; the other upstream
-paths remain pending platform-by-platform verification. Any future exception
-must name the platform, exact host, reason, test, and date.
+and applies it to Reco Box's anonymous TwitCasting requests. PR-07 applies the
+same policy to a first-party Bilibili API adapter; the other upstream paths
+remain pending platform-by-platform verification. Any future exception must name
+the platform, exact host, reason, test, and date.
 
 The legacy importer reads only the selected configuration files. It imports
 room URLs and non-sensitive recording preferences; cookies, account tokens,
