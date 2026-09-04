@@ -2,17 +2,44 @@ $ErrorActionPreference = "Stop"
 
 $ProjectDir = Split-Path -Parent $PSScriptRoot
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
+$VersionScript = Join-Path $ProjectDir "tools\project_version.py"
 $SpecFile = Join-Path $PSScriptRoot "reco_box.spec"
 $BuildDir = Join-Path $ProjectDir "build"
 $DistDir = Join-Path $ProjectDir "dist"
 $SourceDir = Join-Path $ProjectDir "src"
+$VersionInfoTemplate = Join-Path $PSScriptRoot "version_info.txt.in"
+$VersionInfoFile = Join-Path $BuildDir "version_info.txt"
 
 if (-not (Test-Path -LiteralPath $PythonExe)) {
     throw "Project virtual environment is missing: $PythonExe"
 }
+if (-not (Test-Path -LiteralPath $VersionScript)) {
+    throw "Project version reader is missing: $VersionScript"
+}
+if (-not (Test-Path -LiteralPath $VersionInfoTemplate)) {
+    throw "PyInstaller version template is missing: $VersionInfoTemplate"
+}
+
+$Version = (& $PythonExe $VersionScript).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Version)) {
+    throw "Could not read the project version from pyproject.toml"
+}
+$VersionParts = $Version.Split(".")
+if (
+    $VersionParts.Count -ne 3 -or
+    ($VersionParts | Where-Object { $_ -notmatch "^\d+$" })
+) {
+    throw "PyInstaller Windows metadata requires a three-part numeric version: $Version"
+}
+$VersionPartsText = "$($VersionParts[0]), $($VersionParts[1]), $($VersionParts[2]), 0"
+New-Item -ItemType Directory -Path $BuildDir -Force | Out-Null
+$VersionInfo = Get-Content -Raw -LiteralPath $VersionInfoTemplate
+$VersionInfo = $VersionInfo.Replace("@VERSION_PARTS@", $VersionPartsText).Replace("@VERSION@", $Version)
+[IO.File]::WriteAllText($VersionInfoFile, $VersionInfo, [Text.UTF8Encoding]::new($false))
 
 $PreviousPythonPath = $env:PYTHONPATH
 $PreviousPath = $env:PATH
+$PreviousVersionFile = $env:RECO_BOX_VERSION_FILE
 $env:PYTHONPATH = if ($PreviousPythonPath) {
     "$SourceDir$([IO.Path]::PathSeparator)$PreviousPythonPath"
 } else {
@@ -23,12 +50,18 @@ $env:PATH = @(
     (Join-Path $env:SystemRoot "System32"),
     $env:SystemRoot
 ) -join [IO.Path]::PathSeparator
+$env:RECO_BOX_VERSION_FILE = $VersionInfoFile
 
 try {
     & $PythonExe -m PyInstaller --noconfirm --clean --workpath $BuildDir --distpath $DistDir $SpecFile
 } finally {
     $env:PYTHONPATH = $PreviousPythonPath
     $env:PATH = $PreviousPath
+    if ($null -eq $PreviousVersionFile) {
+        Remove-Item Env:RECO_BOX_VERSION_FILE -ErrorAction SilentlyContinue
+    } else {
+        $env:RECO_BOX_VERSION_FILE = $PreviousVersionFile
+    }
 }
 if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller failed with exit code $LASTEXITCODE"

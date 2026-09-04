@@ -1,3 +1,9 @@
 """Reco Box desktop application."""
 
-__version__ = "0.2.0"
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as distribution_version
+
+try:
+    __version__ = distribution_version("reco-box")
+except PackageNotFoundError:
+    __version__ = "0+unknown"

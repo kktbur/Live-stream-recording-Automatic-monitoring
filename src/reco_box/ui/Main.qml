@@ -158,7 +158,8 @@ ApplicationWindow {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 26; anchors.rightMargin: 26; spacing: 8
             Image { source: "../../../assets/reco-box-icon-final.png"; sourceSize.width: 40; sourceSize.height: 40; Layout.preferredWidth: 40; Layout.preferredHeight: 40; fillMode: Image.PreserveAspectFit }
-            Label { text: "Reco Box"; color: window.ink; font.pixelSize: 18; font.weight: Font.DemiBold; Layout.rightMargin: 18 }
+            Label { text: "Reco Box"; color: window.ink; font.pixelSize: 18; font.weight: Font.DemiBold }
+            Label { objectName: "applicationVersionLabel"; text: "v" + applicationVersion; color: window.muted; font.pixelSize: 11; Layout.rightMargin: 18 }
             ToolIconButton { text: "+"; hint: qsTr("添加直播间"); tone: "primary"; onClicked: addDialog.open() }
             Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 26; color: window.lineColor }
             ToolIconButton {
