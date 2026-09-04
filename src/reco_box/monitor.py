@@ -6,6 +6,7 @@ import time
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, QTimer, Signal, Slot
 
 from .domain import RoomStatus
+from .errors import ResolverError, UnknownResolverFailure, classify_resolver_error
 from .rate_limit import ResolverRateLimitConfig, ResolverRateLimiter
 from .resolver import DouyinLiveRecorderResolver, ResolvedStream
 from .room_model import RoomListModel
@@ -14,7 +15,7 @@ from .scheduler import MonitoringScheduler
 
 class ResolverSignals(QObject):
     completed = Signal(str, object)
-    failed = Signal(str, str)
+    failed = Signal(str, object)
 
 
 class ResolverWorker(QRunnable):
@@ -39,7 +40,7 @@ class ResolverWorker(QRunnable):
         try:
             result = asyncio.run(self.resolver.resolve(self.url, self.proxy, self.quality))
         except Exception as error:  # noqa: BLE001 - worker converts errors to user state
-            self.signals.failed.emit(self.room_id, _safe_error(error))
+            self.signals.failed.emit(self.room_id, classify_resolver_error(error))
         else:
             self.signals.completed.emit(self.room_id, result)
 
@@ -71,6 +72,7 @@ class MonitoringCoordinator(QObject):
         self.next_check: dict[str, float] = {}
         self.resolver_retry_attempts: dict[str, int] = {}
         self.last_streams: dict[str, ResolvedStream] = {}
+        self.last_resolver_failures: dict[str, ResolverError] = {}
         self.timer = QTimer(self)
         self.timer.setInterval(1_000)
         self.timer.timeout.connect(self._tick)
@@ -134,6 +136,10 @@ class MonitoringCoordinator(QObject):
     def _resolved(self, room_id: str, result: ResolvedStream) -> None:
         self._release_room(room_id)
         self.resolver_retry_attempts.pop(room_id, None)
+        if result.failure is not None:
+            self.last_resolver_failures[room_id] = result.failure
+        else:
+            self.last_resolver_failures.pop(room_id, None)
         room = self.rooms.get_room(room_id)
         if room is None:
             return
@@ -158,9 +164,12 @@ class MonitoringCoordinator(QObject):
                 title=result.title,
             )
 
-    @Slot(str, str)
-    def _failed(self, room_id: str, message: str) -> None:
+    @Slot(str, object)
+    def _failed(self, room_id: str, failure: ResolverError | str) -> None:
         self._release_room(room_id)
+        if not isinstance(failure, ResolverError):
+            failure = UnknownResolverFailure(str(failure))
+        self.last_resolver_failures[room_id] = failure
         attempt = self.resolver_retry_attempts.get(room_id, 0) + 1
         self.resolver_retry_attempts[room_id] = attempt
         self.last_streams.pop(room_id, None)
@@ -170,9 +179,4 @@ class MonitoringCoordinator(QObject):
         self.scheduler.schedule_retry(
             self.next_check, room_id, room.check_interval_seconds, attempt=attempt
         )
-        self.rooms.update_room_state(room_id, RoomStatus.RETRYING, error=message)
-
-
-def _safe_error(error: Exception) -> str:
-    text = str(error).replace("\r", " ").replace("\n", " ").strip()
-    return (text or error.__class__.__name__)[:300]
+        self.rooms.update_room_state(room_id, RoomStatus.RETRYING, error=str(failure))

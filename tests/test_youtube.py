@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from reco_box.domain import Platform
+from reco_box.errors import ResolverErrorKind
 from reco_box.network_policy import NetworkPolicy, TLSEndpointOverride
 from reco_box.resolver import DouyinLiveRecorderResolver
 from reco_box.youtube import YouTubeResolver
@@ -215,6 +216,35 @@ def test_youtube_maps_anonymous_http_failures_to_offline(status_code: int) -> No
 
     assert result["live_status"] is False
     assert result["room_url"] == page_url
+
+
+@pytest.mark.parametrize(
+    ("status_code", "kind"),
+    [
+        (403, ResolverErrorKind.ACCESS_RESTRICTED),
+        (429, ResolverErrorKind.RATE_LIMITED),
+    ],
+)
+def test_youtube_keeps_offline_contract_and_reports_structured_failure(
+    status_code: int, kind: ResolverErrorKind
+) -> None:
+    page_url = "https://www.youtube.com/watch?v=classified"
+    failures = []
+    resolver = YouTubeResolver(
+        client_factory=fake_client_factory(
+            [FakeResponse("", status_code=status_code, url=page_url)], [], []
+        )
+    )
+
+    result = asyncio.run(resolver.resolve(page_url, failure_sink=failures.append))
+
+    assert result == {
+        "anchor_name": "",
+        "live_status": False,
+        "room_url": page_url,
+    }
+    assert len(failures) == 1
+    assert failures[0].kind is kind
 
 
 @pytest.mark.parametrize(

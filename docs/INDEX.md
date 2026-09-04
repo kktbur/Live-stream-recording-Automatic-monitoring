@@ -22,9 +22,11 @@ cross-check evidence.
 | [PR-07 maintenance record](maintenance/2026-09-05-pr-07-bilibili-tls.md) | Bilibili first-party TLS migration and anonymous request boundary | ACTIVE | Review PR-07 changes |
 | [PR-08 maintenance record](maintenance/2026-09-05-pr-08-youtube-tls.md) | YouTube first-party TLS migration and anonymous request boundary | ACTIVE | Review PR-08 changes |
 | [PR-09 maintenance record](maintenance/2026-09-05-pr-09-scheduler.md) | Resolver scheduling, concurrency limits, cooldown, and jitter | ACTIVE | Review PR-09 changes |
+| [PR-10 maintenance record](maintenance/2026-09-05-pr-10-error-taxonomy.md) | Resolver and recording error taxonomy | ACTIVE | Review PR-10 changes |
 | [Platform Network Security Matrix](platform-network-security.md) | Endpoint inventory, TLS status, and anonymous-access boundaries | ACTIVE | Plan platform-by-platform TLS migration |
 | [ADR-20260904-tls-network-policy](decisions/ADR-20260904-tls-network-policy.md) | Exact-host TLS exception policy | ACTIVE | Change first-party network requests |
 | [ADR-20260905-bilibili-tls-policy](decisions/ADR-20260905-bilibili-tls-policy.md) | Bilibili first-party request boundary | ACTIVE | Change Bilibili network requests |
 | [ADR-20260905-youtube-tls-policy](decisions/ADR-20260905-youtube-tls-policy.md) | YouTube first-party request boundary | ACTIVE | Change YouTube network requests |
 | [ADR-20260905-scheduler-limits-jitter](decisions/ADR-20260905-scheduler-limits-jitter.md) | Resolver scheduling and rate-limit boundary | ACTIVE | Change monitoring concurrency or retry timing |
+| [ADR-20260905-error-taxonomy](decisions/ADR-20260905-error-taxonomy.md) | Resolver and recording failure classification boundary | ACTIVE | Change error handling or recovery hints |
 | [0.2.1 release notes](../RELEASE_NOTES_0.2.1.md) | Version 0.2.1 maintenance and release boundary | ACTIVE | Review the candidate release scope |

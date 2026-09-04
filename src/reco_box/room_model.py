@@ -14,6 +14,7 @@ from PySide6.QtCore import (
 )
 
 from .domain import Room, RoomStatus
+from .errors import safe_error_text
 from .localization import tr
 from .network import normalize_proxy
 from .platforms import detect_platform
@@ -344,7 +345,8 @@ class RoomListModel(QAbstractListModel):
                 continue
             previous_status = room.status
             room.status = status
-            room.last_error = error
+            safe_error = safe_error_text(error) if error else ""
+            room.last_error = safe_error
             if streamer_name and streamer_name != "待识别主播":
                 room.streamer_name = streamer_name
             if title:
@@ -352,7 +354,7 @@ class RoomListModel(QAbstractListModel):
             self.database.upsert_room(room)
             if status != previous_status:
                 level = "error" if status in (RoomStatus.ERROR, RoomStatus.RETRYING) else "info"
-                message = error or f"状态变更：{previous_status.value} → {status.value}"
+                message = safe_error or f"状态变更：{previous_status.value} → {status.value}"
                 self.database.add_event(room.id, level, message)
             index = self.index(row, 0)
             self.dataChanged.emit(

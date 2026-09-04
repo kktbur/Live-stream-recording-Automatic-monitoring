@@ -1,14 +1,21 @@
 from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
 from subprocess import CompletedProcess
 
+from PySide6.QtCore import QCoreApplication
+
+from reco_box.domain import Platform, Room
 from reco_box.recording import (
+    ConversionResult,
     RecordingManager,
     convert_ts_segments,
     has_minimum_free_space,
     recording_retry_delay,
     recording_succeeded,
 )
+from reco_box.room_model import RoomListModel
+from reco_box.storage import Database
 
 
 def test_recording_line_selects_requested_url_and_falls_back_to_last() -> None:
@@ -79,5 +86,52 @@ def test_failed_conversion_keeps_original_ts(monkeypatch, tmp_path) -> None:
     result = convert_ts_segments(Path("ffmpeg.exe"), tmp_path)
 
     assert result.success is False
+    assert result.failure is not None
+    assert result.failure.kind.value == "ffmpeg_failed"
     assert source.is_file()
     assert not (tmp_path / "1.mp4").exists()
+
+
+def test_recording_manager_sanitizes_and_persists_compat_conversion_failure(tmp_path) -> None:
+    QCoreApplication.instance() or QCoreApplication([])
+    database = Database(tmp_path / "reco_box.db")
+    room = Room(
+        url="https://live.bilibili.com/6",
+        platform=Platform.BILIBILI,
+        convert_to_mp4=True,
+    )
+    database.upsert_room(room)
+    rooms = RoomListModel(database)
+    manager = RecordingManager(rooms, database, ffmpeg_path=tmp_path / "ffmpeg.exe")
+    manager.progress_timer.stop()
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    recording_id = database.start_recording(
+        room.id, datetime.now().astimezone(), session_dir
+    )
+
+    manager._conversion_finished(
+        room.id,
+        recording_id,
+        session_dir,
+        False,
+        ConversionResult(
+            False,
+            12,
+            "conversion failed /live.m3u8?sig=signature-secret Cookie: first=one; second=two",
+        ),
+    )
+
+    with database.connection() as connection:
+        record = connection.execute(
+            "SELECT status, error_message FROM recordings WHERE id = ?",
+            (recording_id,),
+        ).fetchone()
+
+    assert record is not None
+    assert record["status"] == "failed"
+    assert "signature-secret" not in record["error_message"]
+    assert "first=one" not in record["error_message"]
+    assert "second=two" not in record["error_message"]
+    assert manager.last_recording_failures[room.id].kind.value == "ffmpeg_failed"
+    assert "signature-secret" not in rooms.get_room(room.id).last_error

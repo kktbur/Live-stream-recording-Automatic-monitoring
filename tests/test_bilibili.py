@@ -13,6 +13,7 @@ from reco_box.bilibili import (
     BilibiliResolver,
 )
 from reco_box.domain import Platform
+from reco_box.errors import ResolverErrorKind
 from reco_box.network_policy import NetworkPolicy, TLSEndpointOverride
 
 
@@ -320,6 +321,37 @@ def test_bilibili_resolver_treats_anonymous_access_denied_as_offline() -> None:
         "live_status": False,
         "room_url": "https://live.bilibili.com/6",
     }
+
+
+@pytest.mark.parametrize(
+    ("status_code", "kind"),
+    [
+        (403, ResolverErrorKind.ACCESS_RESTRICTED),
+        (429, ResolverErrorKind.RATE_LIMITED),
+    ],
+)
+def test_bilibili_keeps_offline_contract_and_reports_structured_failure(
+    status_code: int, kind: ResolverErrorKind
+) -> None:
+    captured: dict[str, Any] = {}
+    failures = []
+    resolver = BilibiliResolver(
+        client_factory=_factory_for(
+            [FakeResponse({}, url=ROOM_INIT_URL, status_code=status_code)], captured
+        ),
+    )
+
+    result = asyncio.run(
+        resolver.resolve("https://live.bilibili.com/6", failure_sink=failures.append)
+    )
+
+    assert result == {
+        "anchor_name": "",
+        "live_status": False,
+        "room_url": "https://live.bilibili.com/6",
+    }
+    assert len(failures) == 1
+    assert failures[0].kind is kind
 
 
 @pytest.mark.parametrize("status_code", [403, 500])
