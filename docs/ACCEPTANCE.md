@@ -44,7 +44,7 @@ for platform-by-platform certificate-compatibility evidence.
   `0.2.1`.
 - First-party request code: `src/reco_box/youtube.py` uses explicit HTTPX TLS policy,
   proxy, HTTP/2 and manual redirect settings without account credentials or Cookie.
-- Local evidence: 29 focused tests passed; the full suite has 112 passed and 2
+- Local evidence: 31 focused tests passed; the full suite has 116 passed and 2
   prerequisite-dependent failures; Ruff, compileall and `git diff --check` passed.
 - Protocol boundaries: YouTube page Hosts are enforced across redirects, manifest
   and variant URLs require HTTP(S), and the existing quality index is preserved.

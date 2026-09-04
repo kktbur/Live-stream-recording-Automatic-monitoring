@@ -9,6 +9,7 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 
 from .domain import Platform
+from .network import normalize_proxy
 from .network_policy import DEFAULT_NETWORK_POLICY, NetworkPolicy
 
 YOUTUBE_PAGE_HOSTS = ("youtube.com", "youtu.be")
@@ -50,7 +51,8 @@ class YouTubeResolver:
         quality_code: str = "OD",
     ) -> dict[str, Any]:
         try:
-            return await self._resolve(url, proxy_addr, quality_code)
+            safe_proxy = normalize_proxy(proxy_addr) if proxy_addr else None
+            return await self._resolve(url, safe_proxy, quality_code)
         except (
             YouTubeResolverError,
             httpx.HTTPError,
@@ -207,15 +209,25 @@ def _hls_variant_urls(manifest: str, manifest_url: str) -> list[str]:
         if not line or line.startswith("#"):
             continue
         if pending_bandwidth is not None:
-            variants.append((pending_bandwidth, urljoin(manifest_url, line)))
+            variants.append(
+                (pending_bandwidth, _require_http_url(urljoin(manifest_url, line)))
+            )
             pending_bandwidth = None
     if variants:
         return [url for _bandwidth, url in sorted(variants, reverse=True)]
-    return [
-        urljoin(manifest_url, line.strip())
-        for line in manifest.splitlines()
-        if line.strip().endswith(".m3u8")
-    ]
+    fallback_urls = []
+    for raw_line in manifest.splitlines():
+        line = raw_line.strip()
+        if line.endswith(".m3u8"):
+            fallback_urls.append(_require_http_url(urljoin(manifest_url, line)))
+    return fallback_urls
+
+
+def _require_http_url(url: str) -> str:
+    parsed = urlsplit(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise YouTubeResolverError("YouTube HLS variant must use an HTTP(S) URL")
+    return url
 
 
 def _required_mapping(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:

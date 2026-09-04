@@ -33,8 +33,8 @@
 
 ## 本地验证
 
-- YouTube、Resolver、网络策略专项测试：`29 passed`。
-- 全量测试：`112 passed、2 failed、5 warnings`；两个失败仍是本机没有既有
+- YouTube、Resolver、网络策略专项测试：`31 passed`。
+- 全量测试：`116 passed、2 failed、5 warnings`；两个失败仍是本机没有既有
   `runtime/ffmpeg/ffmpeg.exe`，分别影响预览解码和连带 self-check 前置项，不归因于
   PR-08；新增 YouTube 测试和其余测试均通过。
 - `ruff check src tests`：通过。

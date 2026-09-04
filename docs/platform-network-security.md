@@ -4,7 +4,7 @@
 
 ## 调查边界
 
-本表是 PR-06 第一阶段盘点和 PR-07 Bilibili 迁移结果。它根据 Reco Box 当前暴露的
+本表是 PR-06 第一阶段盘点、PR-07 Bilibili 迁移和 PR-08 YouTube 迁移结果。它根据 Reco Box 当前暴露的
 `Platform` 枚举、第一方 Resolver 调用和锁定的 DouyinLiveRecorder v4.0.7 源码整理，
 不使用账号、Cookie、密码或通知密钥，也不把临时播放地址写入仓库。
 

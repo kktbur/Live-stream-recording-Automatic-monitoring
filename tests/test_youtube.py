@@ -254,9 +254,20 @@ def test_youtube_maps_empty_manifest_to_offline() -> None:
     assert result["room_url"] == page_url
 
 
-def test_youtube_rejects_non_http_manifest_urls() -> None:
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nfile:///tmp/live.m3u8\n",
+        "#EXTM3U\nfile:///tmp/live.m3u8\n",
+    ],
+)
+def test_youtube_rejects_non_http_hls_variant_urls(manifest: str) -> None:
     page_url = "https://www.youtube.com/watch?v=scheme"
-    responses = [FakeResponse(live_html("file:///tmp/live.m3u8"), url=page_url)]
+    manifest_url = "https://manifest.example/master.m3u8"
+    responses = [
+        FakeResponse(live_html(manifest_url), url=page_url),
+        FakeResponse(manifest, url=manifest_url),
+    ]
     calls = []
     resolver = YouTubeResolver(
         client_factory=fake_client_factory(responses, calls, [])
@@ -265,7 +276,26 @@ def test_youtube_rejects_non_http_manifest_urls() -> None:
     result = run_resolver(resolver, page_url)
 
     assert result["live_status"] is False
-    assert calls == [(page_url, {})]
+    assert calls == [(page_url, {}), (manifest_url, {})]
+
+
+def test_youtube_rejects_proxy_credentials_before_network_access() -> None:
+    page_url = "https://www.youtube.com/watch?v=proxy"
+    responses = [FakeResponse("", url=page_url)]
+    calls = []
+    resolver = YouTubeResolver(
+        client_factory=fake_client_factory(responses, calls, [])
+    )
+
+    result = asyncio.run(
+        resolver.resolve(
+            page_url,
+            proxy_addr="http://user:password@proxy.example:8080",
+        )
+    )
+
+    assert result["live_status"] is False
+    assert calls == []
 
 
 def test_resolver_routes_youtube_to_first_party_adapter() -> None:
