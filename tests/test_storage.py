@@ -58,6 +58,23 @@ def test_settings_and_safe_event_log(tmp_path) -> None:
     assert database.list_events()[0]["message"] == "状态变更：offline → checking"
 
 
+def test_event_storage_sanitizes_direct_error_messages(tmp_path) -> None:
+    database = Database(tmp_path / "reco_box.db")
+    room = Room(url="https://live.bilibili.com/6", platform=Platform.BILIBILI)
+    database.upsert_room(room)
+
+    database.add_event(
+        room.id,
+        "error",
+        "failed /live.m3u8?sig=signature-secret Cookie: first=one; second=two",
+    )
+
+    message = database.list_events()[0]["message"]
+    assert "signature-secret" not in message
+    assert "first=one" not in message
+    assert "second=two" not in message
+
+
 def test_delete_room_keeps_recording_history(tmp_path) -> None:
     database = Database(tmp_path / "reco_box.db")
     room = Room(url="https://live.bilibili.com/6", platform=Platform.BILIBILI)

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import os
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -12,6 +14,7 @@ from platformdirs import user_data_path
 
 from .bilibili import BilibiliResolver
 from .domain import Platform
+from .errors import AccessRestricted, ResolverError, UnsupportedPlatform
 from .localization import tr
 from .network import normalize_proxy
 from .network_policy import DEFAULT_NETWORK_POLICY, NetworkPolicy
@@ -20,11 +23,11 @@ from .resources import upstream_resource
 from .youtube import YouTubeResolver
 
 
-class UnsupportedPlatformError(ValueError):
+class UnsupportedPlatformError(UnsupportedPlatform, ValueError):
     pass
 
 
-class AnonymousAccessUnavailableError(RuntimeError):
+class AnonymousAccessUnavailableError(AccessRestricted):
     pass
 
 
@@ -46,6 +49,7 @@ class ResolvedStream:
     title: str
     stream_urls: tuple[str, ...]
     headers: str = ""
+    failure: ResolverError | None = None
 
 
 def default_upstream_path() -> Path:
@@ -133,17 +137,30 @@ class DouyinLiveRecorderResolver:
             raise UnsupportedPlatformError(tr("暂不支持该直播间链接"))
         proxy_addr = normalize_proxy(proxy) or None
         quality_code = QUALITY_CODES.get(quality, "OD")
+        reported_failure: ResolverError | None = None
+
+        def report_failure(failure: ResolverError) -> None:
+            nonlocal reported_failure
+            reported_failure = failure
 
         if platform is Platform.BILIBILI:
-            payload = await self._bilibili_resolver.resolve(
-                url, proxy_addr=proxy_addr, quality_code=quality_code
+            payload = await _resolve_first_party(
+                self._bilibili_resolver,
+                url,
+                proxy_addr,
+                quality_code,
+                report_failure,
             )
-            return normalize_payload(platform, payload)
+            return normalize_payload(platform, payload, failure=reported_failure)
         if platform is Platform.YOUTUBE:
-            payload = await self._youtube_resolver.resolve(
-                url, proxy_addr=proxy_addr, quality_code=quality_code
+            payload = await _resolve_first_party(
+                self._youtube_resolver,
+                url,
+                proxy_addr,
+                quality_code,
+                report_failure,
             )
-            return normalize_payload(platform, payload)
+            return normalize_payload(platform, payload, failure=reported_failure)
 
         spider = self._load_spider()
         if platform is Platform.DOUYIN:
@@ -263,12 +280,42 @@ def _ffmpeg_headers(headers: dict[str, str]) -> str:
     return "".join(f"{key}: {value}\r\n" for key, value in headers.items())
 
 
-def normalize_payload(platform: Platform, payload: Any) -> ResolvedStream:
+async def _resolve_first_party(
+    resolver: Any,
+    url: str,
+    proxy_addr: str | None,
+    quality_code: str,
+    failure_sink: Callable[[ResolverError], None],
+) -> dict[str, Any]:
+    resolve = resolver.resolve
+    kwargs: dict[str, Any] = {
+        "proxy_addr": proxy_addr,
+        "quality_code": quality_code,
+    }
+    try:
+        parameters = inspect.signature(resolve).parameters.values()
+    except (TypeError, ValueError):
+        parameters = ()
+    if any(
+        parameter.name == "failure_sink"
+        or parameter.kind is inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters
+    ):
+        kwargs["failure_sink"] = failure_sink
+    return await resolve(url, **kwargs)
+
+
+def normalize_payload(
+    platform: Platform,
+    payload: Any,
+    *,
+    failure: ResolverError | None = None,
+) -> ResolvedStream:
     if isinstance(payload, str):
         urls = (payload,) if payload.startswith(("http://", "https://")) else ()
-        return ResolvedStream(platform, bool(urls), "待识别主播", "", urls)
+        return ResolvedStream(platform, bool(urls), "待识别主播", "", urls, failure=failure)
     if not isinstance(payload, dict):
-        return ResolvedStream(platform, False, "待识别主播", "", ())
+        return ResolvedStream(platform, False, "待识别主播", "", (), failure=failure)
 
     urls = tuple(dict.fromkeys(_preferred_stream_urls(payload)))
     live_flags = (
@@ -282,7 +329,15 @@ def normalize_payload(platform: Platform, payload: Any) -> ResolvedStream:
     title = _first_text(payload, "title", "room_title", "live_title")
     header_value = payload.get("headers")
     headers = header_value if isinstance(header_value, str) else ""
-    return ResolvedStream(platform, is_live, name or "待识别主播", title, urls, headers)
+    return ResolvedStream(
+        platform,
+        is_live,
+        name or "待识别主播",
+        title,
+        urls,
+        headers,
+        failure,
+    )
 
 
 def _first_text(payload: dict[str, Any], *keys: str) -> str:

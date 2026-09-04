@@ -9,6 +9,13 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 
 from .domain import Platform
+from .errors import (
+    ParseFailure,
+    ResolverError,
+    ResolverErrorKind,
+    RetryDirective,
+    classify_resolver_error,
+)
 from .network import normalize_proxy
 from .network_policy import DEFAULT_NETWORK_POLICY, NetworkPolicy
 
@@ -23,14 +30,25 @@ BANDWIDTH_PATTERN = re.compile(r"(?:^|,)BANDWIDTH=(\d+)(?:,|$)")
 QUALITY_INDEX = {"OD": 0, "BD": 0, "UHD": 1, "HD": 2, "SD": 3, "LD": 4}
 
 ClientFactory = Callable[..., httpx.AsyncClient]
+FailureSink = Callable[[ResolverError], None]
 
 
-class YouTubeResolverError(RuntimeError):
+class YouTubeResolverError(ParseFailure):
     """Base error for an invalid or unavailable YouTube public response."""
 
 
 class YouTubeAnonymousAccessUnavailableError(YouTubeResolverError):
     """The public YouTube page or manifest rejected an anonymous request."""
+
+    kind = ResolverErrorKind.ACCESS_RESTRICTED
+    retry_directive = RetryDirective.NO_RETRY
+
+
+class YouTubeRateLimitedError(YouTubeResolverError):
+    """The public YouTube endpoint asked the anonymous client to slow down."""
+
+    kind = ResolverErrorKind.RATE_LIMITED
+    retry_directive = RetryDirective.LONG_BACKOFF
 
 
 class YouTubeResolver:
@@ -49,6 +67,7 @@ class YouTubeResolver:
         url: str,
         proxy_addr: str | None = None,
         quality_code: str = "OD",
+        failure_sink: FailureSink | None = None,
     ) -> dict[str, Any]:
         try:
             safe_proxy = normalize_proxy(proxy_addr) if proxy_addr else None
@@ -60,7 +79,9 @@ class YouTubeResolver:
             ValueError,
             KeyError,
             IndexError,
-        ):
+        ) as error:
+            if failure_sink is not None:
+                failure_sink(classify_resolver_error(error))
             # Keep the pinned resolver's anonymous public contract: an
             # unavailable or malformed response is treated as offline.
             return {"anchor_name": "", "live_status": False, "room_url": url}
@@ -153,7 +174,11 @@ class _YouTubeTransport:
             ) as client:
                 response = await client.get(next_url, params={})
             if response.status_code not in REDIRECT_STATUSES:
-                if response.status_code in {401, 403, 429}:
+                if response.status_code == 429:
+                    raise YouTubeRateLimitedError(
+                        f"YouTube anonymous request rate limited at {next_url}"
+                    )
+                if response.status_code in {401, 403}:
                     raise YouTubeAnonymousAccessUnavailableError(
                         f"YouTube anonymous access unavailable at {next_url} "
                         f"(HTTP {response.status_code})"

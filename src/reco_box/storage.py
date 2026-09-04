@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .domain import Room
+from .errors import safe_error_text
 
 SCHEMA_VERSION = 6
 
@@ -255,6 +256,7 @@ class Database:
         total_bytes: int,
         error_message: str = "",
     ) -> None:
+        safe_error = safe_error_text(error_message) if error_message else ""
         with self.connection() as connection:
             connection.execute(
                 """
@@ -267,7 +269,7 @@ class Database:
                     ended_at.isoformat(),
                     status,
                     total_bytes,
-                    error_message,
+                    safe_error,
                     status,
                     recording_id,
                 ),
@@ -295,6 +297,7 @@ class Database:
         codec_summary: str,
         error: str = "",
     ) -> None:
+        safe_error = safe_error_text(error) if error else ""
         with self.connection() as connection:
             connection.execute(
                 """
@@ -302,7 +305,7 @@ class Database:
                 SET probe_status = ?, duration_seconds = ?, codec_summary = ?, probe_error = ?
                 WHERE id = ?
                 """,
-                (status, duration_seconds, codec_summary[:200], error[:300], recording_id),
+                (status, duration_seconds, codec_summary[:200], safe_error, recording_id),
             )
 
     def list_recordings(self, limit: int = 200) -> list[dict[str, object]]:
@@ -358,10 +361,11 @@ class Database:
         return [dict(row) for row in rows]
 
     def add_event(self, room_id: str, level: str, message: str) -> None:
+        safe_message = safe_error_text(message) if message else ""
         with self.connection() as connection:
             connection.execute(
                 "INSERT INTO room_events(room_id, level, message) VALUES (?, ?, ?)",
-                (room_id, level, message[:500]),
+                (room_id, level, safe_message[:500]),
             )
 
     def list_events(self, limit: int = 300) -> list[dict[str, object]]:

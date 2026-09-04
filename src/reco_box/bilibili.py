@@ -7,6 +7,13 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 
 from .domain import Platform
+from .errors import (
+    ParseFailure,
+    ResolverError,
+    ResolverErrorKind,
+    RetryDirective,
+    classify_resolver_error,
+)
 from .network_policy import DEFAULT_NETWORK_POLICY, NetworkPolicy
 
 BILIBILI_API_ORIGIN = "https://api.live.bilibili.com"
@@ -28,14 +35,25 @@ BILIBILI_QN_BY_QUALITY = {
 }
 
 ClientFactory = Callable[..., httpx.AsyncClient]
+FailureSink = Callable[[ResolverError], None]
 
 
-class BilibiliResolverError(RuntimeError):
+class BilibiliResolverError(ParseFailure):
     """Base error for an invalid or unavailable Bilibili public response."""
 
 
 class BilibiliAnonymousAccessUnavailableError(BilibiliResolverError):
     """The public Bilibili endpoint rejected an anonymous request."""
+
+    kind = ResolverErrorKind.ACCESS_RESTRICTED
+    retry_directive = RetryDirective.NO_RETRY
+
+
+class BilibiliRateLimitedError(BilibiliResolverError):
+    """The public Bilibili endpoint asked the anonymous client to slow down."""
+
+    kind = ResolverErrorKind.RATE_LIMITED
+    retry_directive = RetryDirective.LONG_BACKOFF
 
 
 class BilibiliResolver:
@@ -54,6 +72,7 @@ class BilibiliResolver:
         url: str,
         proxy_addr: str | None = None,
         quality_code: str = "OD",
+        failure_sink: FailureSink | None = None,
     ) -> dict[str, Any]:
         try:
             return await self._resolve(url, proxy_addr, quality_code)
@@ -64,7 +83,9 @@ class BilibiliResolver:
             ValueError,
             KeyError,
             IndexError,
-        ):
+        ) as error:
+            if failure_sink is not None:
+                failure_sink(classify_resolver_error(error))
             # Keep the pinned resolver's public contract: an unavailable or
             # malformed anonymous response is treated as an offline room.
             # Detailed failure classification belongs to the later reliability
@@ -201,6 +222,10 @@ class _BilibiliTransport:
         require_success: bool = False,
     ) -> dict[str, Any]:
         response = await self._get_response(url, params)
+        if response.status_code == 429:
+            raise BilibiliRateLimitedError(
+                f"Bilibili anonymous request rate limited at {url}"
+            )
         if response.status_code in {401, 403, 412}:
             raise BilibiliAnonymousAccessUnavailableError(
                 f"Bilibili anonymous access unavailable at {url} (HTTP {response.status_code})"

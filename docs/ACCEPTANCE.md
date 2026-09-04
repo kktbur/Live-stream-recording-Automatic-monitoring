@@ -82,3 +82,21 @@ for platform-by-platform certificate-compatibility evidence.
 - The UI evidence screenshot is [PR-09 settings dialog](maintenance/assets/pr-09-settings-dialog.png);
   it uses synthetic data and contains no credentials or real playback URL.
 - Release boundary: no merge, Tag, formal Release, or `main` modification is part of PR-09.
+
+## PR-10 current acceptance
+
+- Scope: `0.3.0-03` Resolver and Recording error taxonomy; the package version remains `0.2.1`.
+- `src/reco_box/errors.py` defines the planned Resolver and Recording failure types, stable kind
+  values, safe error text, and future recovery directives without applying a new retry policy.
+- Bilibili/YouTube preserve their offline result dictionaries while reporting structured failures
+  through `ResolvedStream.failure`; RecordingManager, UI, events and database boundaries retain
+  classified failures and sanitize sensitive error text.
+- Failed conversions are persisted with status `failed`; compatibility `ConversionResult` values
+  without a failure object are classified at the RecordingManager boundary.
+- Focused taxonomy/monitor/recording/Resolver/storage tests are `84 passed`; the full suite is
+  `171 total, 169 passed、2 failed、5 warnings`.
+  The two failures depend on the local missing `runtime/ffmpeg/ffmpeg.exe` prerequisite.
+- `ruff check src tests`, compileall, and `git diff --check` passed. Final independent review,
+  Draft PR, and remote Windows CI remain the next acceptance gates for this PR.
+- Explicit non-goals: no change to PR-09 retry timing, no stall detection, RecordingSession,
+  recovery state machine, offline hysteresis, crash recovery, or pressure/fault injection.

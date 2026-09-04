@@ -5,7 +5,7 @@
 - Status: ACTIVE
 - Current package version: `0.2.1` (single source: `pyproject.toml`).
 - Current maintenance roadmap target: `0.3.0`.
-- The latest maintenance record is [PR-09 Resolver scheduling and limits](maintenance/2026-09-05-pr-09-scheduler.md).
+- The latest maintenance record is [PR-10 Resolver and recording error taxonomy](maintenance/2026-09-05-pr-10-error-taxonomy.md).
 
 ## Confirmed PR-06 boundary
 
@@ -76,3 +76,21 @@ from this durable product document.
   passed the remote Windows build, self-check, installer, and install/upgrade/uninstall gates.
 - Error taxonomy, stall detection, RecordingSession, recovery state machine, offline hysteresis,
   crash recovery and pressure/fault injection remain later roadmap tasks.
+
+## Confirmed PR-10 boundary
+
+- `src/reco_box/errors.py` defines separate Resolver and Recording failure hierarchies with stable
+  kind values and future recovery directives; the directives are not executed in this PR.
+- First-party Bilibili/YouTube adapters preserve their existing offline dictionary contract while
+  reporting classified access/limit failures through `ResolvedStream.failure`; the Worker and
+  `MonitoringCoordinator` retain the latest structured failure per room.
+- Recording and conversion failures retain structured objects; UI, event and database error
+  boundaries sanitize URLs, query strings, cookies, authorization headers and credentials. Failed
+  conversions are persisted as failed rather than completed.
+- HTTP status, HTTPX/Requests timeout, TLS-chain, parse, and unknown Resolver failures have
+  deterministic classification; error text is bounded and sensitive details are removed.
+- Local PR-10 focused tests are `84 passed`; the full suite is `171 total, 169 passed、2 failed、5 warnings`,
+  with the same missing-FFmpeg prerequisite recorded in the PR-10 maintenance record.
+- Current branch is `codex/0.3.0-02-error-taxonomy`, local code fixed point `a581da1`; final independent
+  review, remote Draft PR and Windows CI remain to be published and verified. The next scope after acceptance is
+  `0.3.0-04` Stall Detection.

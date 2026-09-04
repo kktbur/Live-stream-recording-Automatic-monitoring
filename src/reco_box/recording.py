@@ -12,6 +12,14 @@ from uuid import uuid4
 from PySide6.QtCore import QObject, QProcess, QRunnable, QThreadPool, QTimer, Signal, Slot
 
 from .domain import RoomStatus
+from .errors import (
+    DiskFull,
+    FFmpegFailed,
+    RecordingFailure,
+    classify_recording_error,
+    recording_failure_for_exit,
+    safe_error_text,
+)
 from .ffmpeg import FFmpegPlanner, StreamInput, hidden_startup_info
 from .localization import tr
 from .media_probe import ProbeResult, find_ffprobe, media_files, probe_media_files
@@ -52,6 +60,7 @@ class ConversionResult:
     success: bool
     total_bytes: int
     error: str = ""
+    failure: RecordingFailure | None = None
 
 
 def convert_ts_segments(ffmpeg_path: Path, session_dir: Path) -> ConversionResult:
@@ -94,18 +103,24 @@ def convert_ts_segments(ffmpeg_path: Path, session_dir: Path) -> ConversionResul
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             destination.unlink(missing_ok=True)
+            failure = classify_recording_error(error)
             return ConversionResult(
                 False,
                 sum(path.stat().st_size for path in session_dir.glob("*") if path.is_file()),
-                f"{source.name} 转换失败：{str(error)[:300]}",
+                f"{source.name} 转换失败：{failure}",
+                failure,
             )
         if completed.returncode != 0:
             destination.unlink(missing_ok=True)
             message = completed.stderr.replace("\r", " ").replace("\n", " ").strip()
+            failure = FFmpegFailed(
+                f"{source.name} 转换失败：{message[:300] or completed.returncode}"
+            )
             return ConversionResult(
                 False,
                 sum(path.stat().st_size for path in session_dir.glob("*") if path.is_file()),
-                f"{source.name} 转换失败：{message[:300] or completed.returncode}",
+                str(failure),
+                failure,
             )
         converted.append(destination)
 
@@ -189,6 +204,7 @@ class RecordingManager(QObject):
         self.recovery_indices: dict[str, int] = {}
         self.last_disk_checks: dict[str, float] = {}
         self.protective_stop_errors: dict[str, str] = {}
+        self.last_recording_failures: dict[str, RecordingFailure] = {}
         self.progress_timer = QTimer(self)
         self.progress_timer.setInterval(1_000)
         self.progress_timer.timeout.connect(self._update_progress)
@@ -200,13 +216,16 @@ class RecordingManager(QObject):
         if room is None or room_id in self.processes or room_id in self.converting_rooms:
             return
         if self.ffmpeg_path is None:
+            failure = FFmpegFailed(tr("未找到 FFmpeg；开发版需要设置 RECO_BOX_FFMPEG"))
+            self.last_recording_failures[room_id] = failure
             self.rooms.update_room_state(
                 room_id,
                 RoomStatus.ERROR,
-                error=tr("未找到 FFmpeg；开发版需要设置 RECO_BOX_FFMPEG"),
+                error=str(failure),
             )
             return
         if not resolved.stream_urls:
+            self.last_recording_failures.pop(room_id, None)
             self.rooms.update_room_state(room_id, RoomStatus.OFFLINE)
             return
 
@@ -222,7 +241,9 @@ class RecordingManager(QObject):
                 started_at,
             )
         except ValueError as error:
-            self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=str(error))
+            failure = classify_recording_error(error)
+            self.last_recording_failures[room_id] = failure
+            self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=str(failure))
             return
 
         try:
@@ -230,15 +251,20 @@ class RecordingManager(QObject):
         except ValueError:
             minimum_free_gb = 5.0
         if not has_minimum_free_space(plan.session_dir, minimum_free_gb):
+            failure = DiskFull(
+                tr("磁盘剩余空间低于 {minimum_free_gb:g} GB，已阻止开始录制").format(
+                    minimum_free_gb=minimum_free_gb
+                )
+            )
+            self.last_recording_failures[room_id] = failure
             self.rooms.update_room_state(
                 room_id,
                 RoomStatus.ERROR,
-                error=tr("磁盘剩余空间低于 {minimum_free_gb:g} GB，已阻止开始录制").format(
-                    minimum_free_gb=minimum_free_gb
-                ),
+                error=str(failure),
             )
             return
 
+        self.last_recording_failures.pop(room_id, None)
         process = QProcess(self)
         process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         process.setProgram(plan.command[0])
@@ -290,6 +316,7 @@ class RecordingManager(QObject):
                     message = (
                         f"磁盘剩余空间低于 {minimum_free_gb:g} GB，已安全停止录制"
                     )
+                    self.last_recording_failures[room_id] = DiskFull(message)
                     self.protective_stop_errors[room_id] = message
                     process = self.processes.get(room_id)
                     if process:
@@ -350,7 +377,9 @@ class RecordingManager(QObject):
         intentional = bool(process and process.property("intentionalStop"))
         if intentional or room_id in self.manual_stops:
             return
-        self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=message[:300])
+        failure = FFmpegFailed(message or f"FFmpeg 进程错误：{error}")
+        self.last_recording_failures[room_id] = failure
+        self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=str(failure))
         if error == QProcess.ProcessError.FailedToStart:
             QTimer.singleShot(0, lambda: self._finished(room_id, -1))
 
@@ -376,6 +405,16 @@ class RecordingManager(QObject):
         self.pause_after_stops.discard(room_id)
         protective_error = self.protective_stop_errors.pop(room_id, "")
         success = recording_succeeded(exit_code, manual_stop, protective_error)
+        failure = recording_failure_for_exit(
+            exit_code,
+            intentional_stop=manual_stop,
+            protective_error=protective_error,
+            message=f"FFmpeg 退出码 {exit_code}",
+        )
+        if failure is not None:
+            self.last_recording_failures[room_id] = failure
+        elif success:
+            self.last_recording_failures.pop(room_id, None)
         room = self.rooms.get_room(room_id)
         if success and recording_id and room and room.convert_to_mp4:
             self.database.mark_recording_converting(
@@ -401,7 +440,7 @@ class RecordingManager(QObject):
                 datetime.now().astimezone(),
                 "completed" if success else "failed",
                 total_bytes,
-                "" if success else protective_error or f"FFmpeg 退出码 {exit_code}",
+                "" if success else str(failure or FFmpegFailed(f"FFmpeg 退出码 {exit_code}")),
             )
             if success:
                 self._start_probe(recording_id, session_dir)
@@ -411,7 +450,7 @@ class RecordingManager(QObject):
             self.recovery_indices.pop(room_id, None)
             room = self.rooms.get_room(room_id)
             delay = room.check_interval_seconds if room else 300
-            self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=protective_error)
+            self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=str(failure))
             self.retryRequested.emit(room_id, delay)
         elif success:
             self.retry_counts.pop(room_id, None)
@@ -431,7 +470,7 @@ class RecordingManager(QObject):
                 self.rooms.update_room_state(
                     room_id,
                     RoomStatus.RETRYING,
-                    error=f"FFmpeg 退出码 {exit_code}；{delay} 秒后进行第 {attempt} 次重试",
+                    error=f"{failure or FFmpegFailed(f'FFmpeg 退出码 {exit_code}')}；{delay} 秒后进行第 {attempt} 次重试",
                 )
             else:
                 delay = room.check_interval_seconds if room else 300
@@ -457,27 +496,39 @@ class RecordingManager(QObject):
         result: ConversionResult,
     ) -> None:
         self.converting_rooms.discard(room_id)
+        failure = result.failure
+        if failure is None and not result.success:
+            failure = classify_recording_error(result.error or "录制转换失败")
+        if failure is not None:
+            self.last_recording_failures[room_id] = failure
+        elif result.success:
+            self.last_recording_failures.pop(room_id, None)
+        error_message = safe_error_text(result.error) if result.error else ""
+        if failure is not None and not error_message:
+            error_message = str(failure)
+        status = "completed" if result.success else "failed"
         self.database.finish_recording(
             recording_id,
             datetime.now().astimezone(),
-            "completed",
+            status,
             result.total_bytes,
-            result.error,
+            error_message,
         )
-        self._start_probe(recording_id, session_dir)
+        if result.success:
+            self._start_probe(recording_id, session_dir)
         self.retry_counts.pop(room_id, None)
         self.session_groups.pop(room_id, None)
         self.recovery_indices.pop(room_id, None)
         if pause_monitoring:
             self.rooms.set_room_enabled(room_id, False)
-            if result.error:
+            if error_message:
                 self.rooms.update_room_state(
-                    room_id, RoomStatus.DISABLED, error=result.error
+                    room_id, RoomStatus.DISABLED, error=error_message
                 )
         elif result.success:
             self.rooms.update_room_state(room_id, RoomStatus.OFFLINE)
         else:
-            self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=result.error)
+            self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=error_message)
         self.rooms.update_recording_progress(room_id, 0, result.total_bytes)
         self.recordingCompleted.emit()
 

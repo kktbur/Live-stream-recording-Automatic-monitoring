@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from reco_box.domain import Platform
+from reco_box.errors import AccessRestricted, ResolverErrorKind
 from reco_box.network_policy import NetworkPolicy, TLSEndpointOverride
 from reco_box.resolver import (
     AnonymousAccessUnavailableError,
@@ -67,6 +68,23 @@ def test_bilibili_uses_room_info_and_selected_quality() -> None:
     assert result.streamer_name == "主播"
     assert result.stream_urls == ("https://cdn.example.com/live.flv",)
     assert captured["quality"] == "UHD"
+
+
+def test_first_party_offline_result_keeps_structured_failure_side_channel() -> None:
+    async def resolve_bilibili(url, proxy_addr=None, quality_code="", failure_sink=None):
+        if failure_sink is not None:
+            failure_sink(AccessRestricted("Cookie: session=secret"))
+        return {"anchor_name": "", "live_status": False, "room_url": url}
+
+    resolver = DouyinLiveRecorderResolver(
+        bilibili_resolver=SimpleNamespace(resolve=resolve_bilibili),
+    )
+    result = asyncio.run(resolver.resolve("https://live.bilibili.com/6"))
+
+    assert result.is_live is False
+    assert result.failure is not None
+    assert result.failure.kind is ResolverErrorKind.ACCESS_RESTRICTED
+    assert "secret" not in str(result.failure)
 
 
 def test_page_url_is_never_treated_as_media_stream() -> None:

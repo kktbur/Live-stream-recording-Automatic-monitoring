@@ -3,7 +3,8 @@ from PySide6.QtCore import QThreadPool
 import reco_box.monitor as monitor_module
 import reco_box.scheduler as scheduler_module
 from reco_box.domain import Platform, Room, RoomStatus
-from reco_box.monitor import MonitoringCoordinator
+from reco_box.errors import AccessRestricted, ResolverErrorKind, RetryDirective
+from reco_box.monitor import MonitoringCoordinator, ResolverWorker
 from reco_box.rate_limit import ResolverRateLimitConfig
 from reco_box.resolver import ResolvedStream
 from reco_box.room_model import RoomListModel
@@ -24,6 +25,48 @@ class FakeResolverPool:
 
     def start(self, worker) -> None:
         self.workers.append(worker)
+
+
+def test_resolver_worker_emits_classified_timeout() -> None:
+    class FailingResolver:
+        async def resolve(self, *_args):
+            raise TimeoutError("resolver timed out")
+
+    failures = []
+    worker = ResolverWorker(
+        "room", "https://example.test/live", "", "原画", FailingResolver()
+    )
+    worker.signals.failed.connect(lambda room_id, failure: failures.append((room_id, failure)))
+
+    worker.run()
+
+    assert failures[0][0] == "room"
+    assert failures[0][1].kind is ResolverErrorKind.NETWORK_TIMEOUT
+    assert failures[0][1].retry_directive is RetryDirective.SHORT_BACKOFF
+
+
+def test_monitor_retains_platform_failure_on_compatible_offline_result(tmp_path) -> None:
+    database = Database(tmp_path / "reco_box.db")
+    room = Room(url="https://live.bilibili.com/1", platform=Platform.BILIBILI)
+    database.upsert_room(room)
+    rooms = RoomListModel(database)
+    coordinator = MonitoringCoordinator(rooms, object())
+    failure = AccessRestricted("anonymous access denied")
+
+    coordinator._resolved(
+        room.id,
+        ResolvedStream(Platform.BILIBILI, False, "", "", (), failure=failure),
+    )
+
+    assert coordinator.last_resolver_failures[room.id] is failure
+    assert rooms.get_room(room.id).status is RoomStatus.OFFLINE
+
+    coordinator._resolved(
+        room.id,
+        ResolvedStream(Platform.BILIBILI, False, "", "", ()),
+    )
+
+    assert room.id not in coordinator.last_resolver_failures
 
 
 def test_check_all_now_clears_wait_for_every_enabled_room(monkeypatch, tmp_path) -> None:
