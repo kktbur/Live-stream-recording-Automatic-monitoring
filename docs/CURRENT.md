@@ -1,5 +1,7 @@
 # CURRENT
 
+- Last updated: 2026-09-05
+
 - Status: ACTIVE
 - Current package version: `0.2.1` (single source: `pyproject.toml`).
 - Current maintenance roadmap target: `0.2.2`.
