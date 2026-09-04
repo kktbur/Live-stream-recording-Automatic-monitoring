@@ -102,13 +102,20 @@ function Invoke-SilentInstaller {
         [Parameter(Mandatory)]
         [string]$InstallerPath,
         [Parameter(Mandatory)]
-        [string]$InstallPath
+        [string]$InstallPath,
+        [Parameter(Mandatory)]
+        [string]$LogPath
     )
 
-    $arguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $InstallPath + '"'
+    $arguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /LOG="' + $LogPath + '" /DIR="' + $InstallPath + '"'
     $process = Start-Process -FilePath $InstallerPath -ArgumentList $arguments -Wait -PassThru
     if ($process.ExitCode -ne 0) {
-        throw "Installer $InstallerPath exited with code $($process.ExitCode)"
+        $details = if (Test-Path -LiteralPath $LogPath) {
+            (Get-Content -LiteralPath $LogPath | Select-Object -Last 40) -join [Environment]::NewLine
+        } else {
+            "Installer log was not created: $LogPath"
+        }
+        throw "Installer $InstallerPath exited with code $($process.ExitCode).`n$details"
     }
 }
 
@@ -197,11 +204,11 @@ if (-not (Test-Path -LiteralPath $PreviousInstaller -PathType Leaf)) {
     throw "Previous installer is missing: $PreviousInstaller"
 }
 $PreviousInstaller = (Get-Item -LiteralPath $PreviousInstaller).FullName
-Invoke-SilentInstaller -InstallerPath $PreviousInstaller -InstallPath $Target
+Invoke-SilentInstaller -InstallerPath $PreviousInstaller -InstallPath $Target -LogPath (Join-Path $DataDir "installer-0.2.0.log")
 $PreviousExe = Join-Path $Target "RecoBox.exe"
 Invoke-InstalledSelfTest -ExecutablePath $PreviousExe
 
-Invoke-SilentInstaller -InstallerPath $Installer -InstallPath $Target
+Invoke-SilentInstaller -InstallerPath $Installer -InstallPath $Target -LogPath (Join-Path $DataDir "installer-0.2.1.log")
 $Exe = Join-Path $Target "RecoBox.exe"
 Invoke-InstalledSelfTest -ExecutablePath $Exe
 & pwsh -NoProfile -File $VersionCheckScript -ExecutablePath $Exe -InstallerPath $Installer
@@ -215,7 +222,8 @@ $Uninstaller = Get-ChildItem -LiteralPath $Target -Filter "unins*.exe" -File -Fo
 if (-not $Uninstaller) {
     throw "Installer did not create an uninstaller under $Target"
 }
-$uninstallArguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"
+$UninstallLogPath = Join-Path $DataDir "uninstaller.log"
+$uninstallArguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /LOG="' + $UninstallLogPath + '"'
 $uninstallProcess = Start-Process -FilePath $Uninstaller.FullName -ArgumentList $uninstallArguments -Wait -PassThru
 if ($uninstallProcess.ExitCode -ne 0) {
     throw "Uninstaller exited with code $($uninstallProcess.ExitCode)"

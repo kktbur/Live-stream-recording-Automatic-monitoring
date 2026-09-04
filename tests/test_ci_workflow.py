@@ -402,7 +402,7 @@ def test_installer_smoke_covers_upgrade_uninstall_and_user_data_preservation() -
 
     assert "PreviousInstallerPath" in source
     assert "[Parameter(Mandatory = $true)]" in source
-    assert "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" in source
+    assert "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /LOG=" in source
     assert "RECO_BOX_DATA_DIR" in source
     assert "reco_box.db" in source
     assert "from reco_box.storage import Database" in source
