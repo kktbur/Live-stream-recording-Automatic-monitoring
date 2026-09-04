@@ -6,7 +6,7 @@
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
 - 本地分支：`codex/0.3.0-01-scheduler`，本地固定点 `141803d`
 - 远程 Draft PR：[PR #13](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/13)，
-  远程 head `7138a6adff74783e2233208691e57c65aa30ad17`
+  远程 head `07d06bb31789a31c757d32ba8653bcd3806def8f`
 - 远程恢复点：PR-08 文档同步后的 head `159a6893e7555efbed9169cbd4b03346a1d82cb6`
 
 ## 范围
@@ -49,9 +49,9 @@
 
 ## 远程验证
 
-- Windows CI [run #38](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33923911448)：通过。
+- Windows CI [run #39](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33924632389)：通过。
 - 该运行完成 lockfile 校验、测试、Windows 应用构建、打包自检、十语言安装器构建和安装/升级/卸载冒烟。
-- 诊断工件 `RecoBox-installer-e2e-diagnostics-33923911448` 上传成功，保留至 2026-09-11。
+- 诊断工件 `RecoBox-installer-e2e-diagnostics-33924632389` 上传成功，保留至 2026-09-11。
 - 独立 Standards/Spec 最终审查均无 P0/P1/P2/P3 阻塞问题；UI 截图已作为 PR 描述和维护记录证据。
 
 ## 证据边界

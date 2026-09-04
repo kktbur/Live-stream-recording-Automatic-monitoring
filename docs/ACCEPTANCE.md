@@ -77,7 +77,7 @@ for platform-by-platform certificate-compatibility evidence.
   stall recovery, RecordingSession, or crash recovery is claimed by this PR.
 - Final independent Standards/Spec review found no blocking issue. Draft PR
   [#13](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/13)
-  is open/draft, and Windows CI [#38](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33923911448)
+  is open/draft, and Windows CI [#39](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33924632389)
   passed the remote Windows validation stages, including installer install/upgrade/uninstall smoke.
 - The UI evidence screenshot is [PR-09 settings dialog](maintenance/assets/pr-09-settings-dialog.png);
   it uses synthetic data and contains no credentials or real playback URL.
