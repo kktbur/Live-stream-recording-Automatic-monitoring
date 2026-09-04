@@ -1,10 +1,13 @@
 # PR-06：TLS 网络矩阵与第一方策略接入
 
-- 状态：本地实施、验证和审查修正完成；远程 Draft PR 与 Windows CI 待发布
+- 状态：本地实施、验证和审查修正完成；远程 Draft PR #10 已发布，Windows CI #29 已通过
 - 路线目标版本：`0.2.2`（本 PR 不提前修改项目版本号，当前包版本仍为 `0.2.1`）
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
 - 基线：PR-05 远程 head `04ad3eb8634e8f0595f09353b4737fcb3481f79f`
 - 预期分支：`codex/0.2.2-06-tls-network-matrix`
+- 远程 Draft PR：[PR #10](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/10)
+- 远程验收：Windows CI [#29](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33895281848) 在远程 head
+  `5f8dfbb0d97f7aaff51d773870365207b7f221d0` 上通过；安装器安装、升级、卸载冒烟和诊断产物上传均成功。
 - 备份方式：保留本地 PR-05 分支提交 `2b3dfd14c9da4149dcd6c49bc9521f48f5a79d12` 和远程 PR-05 head 作为恢复快照；本轮不接触用户数据库、录制文件或构建产物。
 
 ## 范围
@@ -53,10 +56,12 @@ TwitCasting 第一方请求外，其他平台本轮只能记录为“上游默�
 - [x] 平台矩阵覆盖当前 `Platform` 枚举和匿名访问边界。
 - [x] 默认策略执行 TLS 校验，例外匹配精确 Host。
 - [x] TwitCasting 第一方请求的回归测试确认 `verify=True`，精确 Host 例外路径也有回归测试。
-- [ ] 远程 Windows CI 通过；本地普通测试已通过，FFmpeg 依赖项的本地限制已记录。
+- [x] 远程 Windows CI 通过；本地普通测试已通过，FFmpeg 依赖项的本地限制已记录。
 - [x] README、隐私说明和开源审计记录没有把部分迁移写成全部完成。
 
 ## 恢复与下一步
 
-如果策略接线失败，只回退本 PR 新增提交，不改写 PR-05 及更早分支。下一步将从矩阵中
-选择一个公开样本充分、请求边界清晰的平台，单独恢复其兼容路径的 TLS 校验。
+如果策略接线失败，只回退本 PR 新增提交，不改写 PR-05 及更早分支。远程文档同步提交
+会再次触发 Windows CI；该轮用于确认维护记录同步不影响已通过的构建、安装器和测试门槛。
+下一步将从矩阵中选择一个公开样本充分、请求边界清晰的平台，单独恢复其兼容路径的 TLS
+校验。
