@@ -17,7 +17,9 @@
       maintenance/            Per-PR maintenance records
       platform-*.md           Platform validation and network evidence
     src/reco_box/             Application and resolver code
+      bilibili.py             First-party anonymous Bilibili resolver
     tests/                    Automated regression and contract tests
+      test_bilibili.py        Offline Bilibili request-boundary tests
     tools/                    Verification and runtime-preparation tools
     packaging/                PyInstaller and Inno Setup inputs
     vendor/                   Pinned upstream source

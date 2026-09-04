@@ -10,6 +10,7 @@ from typing import Any
 
 from platformdirs import user_data_path
 
+from .bilibili import BilibiliResolver
 from .domain import Platform
 from .localization import tr
 from .network import normalize_proxy
@@ -70,12 +71,16 @@ class DouyinLiveRecorderResolver:
         upstream_path: Path | None = None,
         runtime_path: Path | None = None,
         network_policy: NetworkPolicy | None = None,
+        bilibili_resolver: BilibiliResolver | None = None,
     ):
         self._spider = spider_module
         self._stream = stream_module
         self.upstream_path = Path(upstream_path or default_upstream_path())
         self.runtime_path = Path(runtime_path or default_upstream_runtime_path())
         self.network_policy = network_policy or DEFAULT_NETWORK_POLICY
+        self._bilibili_resolver = bilibili_resolver or BilibiliResolver(
+            network_policy=self.network_policy
+        )
 
     def _load_spider(self) -> ModuleType:
         if self._spider is not None:
@@ -121,10 +126,16 @@ class DouyinLiveRecorderResolver:
         platform = detect_platform(url)
         if platform is Platform.UNKNOWN:
             raise UnsupportedPlatformError(tr("暂不支持该直播间链接"))
-        spider = self._load_spider()
         proxy_addr = normalize_proxy(proxy) or None
         quality_code = QUALITY_CODES.get(quality, "OD")
 
+        if platform is Platform.BILIBILI:
+            payload = await self._bilibili_resolver.resolve(
+                url, proxy_addr=proxy_addr, quality_code=quality_code
+            )
+            return normalize_payload(platform, payload)
+
+        spider = self._load_spider()
         if platform is Platform.DOUYIN:
             raw = await spider.get_douyin_stream_data(url, proxy_addr=proxy_addr, cookies=None)
             payload = await self._load_stream().get_douyin_stream_url(
@@ -137,11 +148,6 @@ class DouyinLiveRecorderResolver:
             raw = await spider.get_tiktok_stream_data(url, proxy_addr=proxy_addr, cookies=None)
             payload = await self._load_stream().get_tiktok_stream_url(
                 raw, quality_code, proxy_addr
-            )
-        elif platform is Platform.BILIBILI:
-            raw = await spider.get_bilibili_room_info(url, proxy_addr=proxy_addr, cookies=None)
-            payload = await self._load_stream().get_bilibili_stream_url(
-                raw, quality_code, proxy_addr, None
             )
         elif platform is Platform.YOUTUBE:
             raw = await spider.get_youtube_stream_url(url, proxy_addr=proxy_addr, cookies=None)
