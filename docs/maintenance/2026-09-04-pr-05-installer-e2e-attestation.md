@@ -40,17 +40,17 @@
 
 ## 验收方式
 
-远程 Windows CI 已在最终 [run #24](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33885126240) 逐步通过：锁文件检查、锁定依赖安装、版本检查、Ruff、完整测试、应用构建、打包 self-check、Inno Setup 安装器编译、固定旧版安装、当前版本覆盖安装、安装后 self-check、静默卸载、安装根目录清理，以及通过应用存储接口读回外置 SQLite 应用配置、房间记录、录制历史和其他用户数据保留。安装器测试没有旧版输入时会失败，不能使用当前版本替代。
+远程 Windows CI 已在 [run #25](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33886308739) 逐步通过：锁文件检查、锁定依赖安装、版本检查、Ruff、完整测试、应用构建、打包 self-check、Inno Setup 安装器编译、固定旧版安装、当前版本覆盖安装、安装后 self-check、静默卸载、安装根目录清理，以及通过应用存储接口读回外置 SQLite 应用配置、房间记录、录制历史和其他用户数据保留。安装器测试没有旧版输入时会失败，不能使用当前版本替代。
 
-首次 CI #18–#21 在工作区安装目标下暴露 Inno Setup 目标文件重命名失败（退出码 5，静默对话框默认 Abort 并回滚）；#22 因远程分支连续更新被取消。将安装目标隔离到 `RUNNER_TEMP` 后 #23 通过，说明该修正解决了 Runner 工作区路径上的文件锁/扫描竞争，不放宽安装器非零退出失败门槛。
+首次 CI #18–#21 在工作区安装目标下暴露 Inno Setup 目标文件重命名失败（退出码 5，静默对话框默认 Abort 并回滚）；#22 因远程分支连续更新被取消。将安装目标隔离到 `RUNNER_TEMP` 后 #23、#24 和 #25 通过，说明该修正解决了 Runner 工作区路径上的文件锁/扫描竞争，不放宽安装器非零退出失败门槛。
 
-Draft PR：[PR #9](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/9)，最终远程 head `316a13fa478c40a201cd5f27593a54565d40b2b3`。
+Draft PR：[PR #9](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/9) 保持 open/draft；当前远程 head 和最新 CI 以 PR 页面为准。
 
 未来正式发布还必须由 `release.yml` 在 `v*` Tag 或手动既有 Tag 上完成：构建 artifact、核对 SHA-256、使用 `actions/attest` 生成二进制来源证明，然后创建并发布 GitHub Release。attestation job 只拥有 `contents: read`、`id-token: write` 和 `attestations: write`；只有 publish job 拥有 `contents: write`。
 
 ## 已知本地限制
 
-本机仓库没有提交 `runtime/ffmpeg/ffmpeg.exe` 和 `ffprobe.exe`，因此完整本地测试中预览解码及其连带 self-check 前置项不能有效完成。二进制运行时仍由 CI 下载并按 hash 校验；本地不伪造安装器 E2E，真实安装器结果以最终远程 Windows CI #24 为准。
+本机仓库没有提交 `runtime/ffmpeg/ffmpeg.exe` 和 `ffprobe.exe`，因此完整本地测试中预览解码及其连带 self-check 前置项不能有效完成。二进制运行时仍由 CI 下载并按 hash 校验；本地不伪造安装器 E2E，真实安装器结果以最终远程 Windows CI #25 为准。
 
 ## 恢复与回滚
 
