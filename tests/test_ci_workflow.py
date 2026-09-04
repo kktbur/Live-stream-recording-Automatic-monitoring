@@ -328,6 +328,10 @@ def test_ci_is_read_only_and_only_uploads_when_called_for_a_release_candidate() 
     assert "RecoBox-Setup-0.2.0.exe" in source
     assert "Run installer install, upgrade, and uninstall smoke" in source
     assert steps["Upload installer test artifact"]["if"] == "${{ inputs.upload_artifact }}"
+    assert steps["Upload installer E2E diagnostics"]["if"] == "${{ always() }}"
+    diagnostics_path = steps["Upload installer E2E diagnostics"]["with"]["path"]
+    assert "artifacts/install-user-data-*/installer-*.log" in diagnostics_path
+    assert "artifacts/install-user-data-*/uninstaller.log" in diagnostics_path
 
 
 def test_release_workflow_builds_attests_and_publishes_only_tag_or_manual() -> None:
@@ -401,6 +405,7 @@ def test_installer_smoke_covers_upgrade_uninstall_and_user_data_preservation() -
     source = (ROOT / "tools" / "test_installer.ps1").read_text(encoding="utf-8")
 
     assert "PreviousInstallerPath" in source
+    assert "RUNNER_TEMP" in source
     assert "[Parameter(Mandatory = $true)]" in source
     assert "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /LOG=" in source
     assert "RECO_BOX_DATA_DIR" in source
@@ -414,3 +419,4 @@ def test_installer_smoke_covers_upgrade_uninstall_and_user_data_preservation() -
     assert "Start-Sleep -Milliseconds 250" in source
     assert "Assert-PreservedUserData" in source
     assert "self-check.json" in source
+

@@ -215,3 +215,15 @@ jobs:
           path: |
             dist/installer/RecoBox-Setup-${{ steps.project-version.outputs.version }}.exe
             dist/installer/RecoBox-Setup-${{ steps.project-version.outputs.version }}.exe.sha256.txt
+
+      - name: Upload installer E2E diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: RecoBox-installer-e2e-diagnostics-${{ github.run_id }}
+          path: |
+            artifacts/install-user-data-*/installer-*.log
+            artifacts/install-user-data-*/uninstaller.log
+          if-no-files-found: warn
+          retention-days: 7
+

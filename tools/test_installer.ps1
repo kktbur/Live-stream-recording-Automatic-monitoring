@@ -31,15 +31,20 @@ if (-not (Test-Path -LiteralPath $Installer)) {
 
 $ArtifactsDir = Join-Path $ProjectDir "artifacts"
 $TestId = [guid]::NewGuid().ToString("N")
-$Target = Join-Path $ArtifactsDir "install-test-$Version-$TestId"
+$TestRoot = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) {
+    Join-Path $ArtifactsDir "install-test-$Version-$TestId"
+} else {
+    Join-Path $env:RUNNER_TEMP "reco-box-installer-$Version-$TestId"
+}
+$Target = Join-Path $TestRoot "install"
 $DataDir = Join-Path $ArtifactsDir "install-user-data-$Version-$TestId"
 $DatabasePath = Join-Path $DataDir "reco_box.db"
 $SentinelPath = Join-Path $DataDir "upgrade-sentinel.txt"
 $Sentinel = "raco-box-upgrade-$TestId"
 
 New-Item -ItemType Directory -Force -Path $ArtifactsDir | Out-Null
-if (Test-Path -LiteralPath $Target) {
-    throw "Refusing to reuse an existing install test directory: $Target"
+if (Test-Path -LiteralPath $TestRoot) {
+    throw "Refusing to reuse an existing install test directory: $TestRoot"
 }
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 Set-Content -LiteralPath $SentinelPath -Value $Sentinel -NoNewline -Encoding utf8NoBOM
@@ -126,7 +131,7 @@ function Invoke-SilentInstaller {
                 $markerContext = @($logLines[$firstMarker..$lastMarker])
                 "Installer log error context:`n$($markerContext -join [Environment]::NewLine)"
             } else {
-                "Installer log tail:`n$($logLines | Select-Object -Last 120 -join [Environment]::NewLine)"
+                "Installer log tail:`n$((($logLines | Select-Object -Last 120) -join [Environment]::NewLine))"
             }
         } else {
             "Installer log was not created: $LogPath"
