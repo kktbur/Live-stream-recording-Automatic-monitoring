@@ -175,6 +175,17 @@ for platform-by-platform certificate-compatibility evidence.
   compileall, and `git diff --check` passed.
 - Final independent Standards and Spec review of fixed point `68a81f3` both
   returned PASS with no P0–P3 findings.
+- Draft PR [#17](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/17)
+  is open/draft at remote head `c9735602ad7203394d343be67eb538fafcf5a2df`, based on
+  PR-12 head `11fda0bfaf9fb6889ecd23bd4367cfce0c264480`.
+- Windows CI [#47](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33942125612)
+  passed its single job, including tests, Windows build, packaged self-check,
+  ten-language installer build, and install/upgrade/uninstall smoke. Diagnostic
+  artifact `RecoBox-installer-e2e-diagnostics-33942125612` is retained until
+  2026-09-12 with digest
+  `sha256:8ad2471302480171351df62d65d78ce2c9a921e8290fe261ff07a6119babb96c`.
+- Owner acceptance remains pending; the PR stays unmerged and no tag, formal
+  Release, or `main` modification was made.
 - Explicit non-goals: no startup recovery, recovery state machine, offline
   hysteresis, package-version change, merge, tag, formal Release, or `main`
   modification.

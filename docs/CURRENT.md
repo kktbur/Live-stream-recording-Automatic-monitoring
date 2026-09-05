@@ -164,6 +164,12 @@ from this durable product document.
   active session before a later broadcast can create a new one; PR-14 will add
   continuous offline confirmation before this boundary is applied.
 - Fixed point `68a81f3` passed the final independent Standards and Spec reviews;
-  remote Draft PR and Windows CI remain the next release evidence gates.
+  Draft PR [#17](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/17)
+  is open/draft at remote head `c9735602ad7203394d343be67eb538fafcf5a2df`.
+- Windows CI [#47](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33942125612)
+  passed the single Windows job and its installer E2E gates; diagnostic artifact
+  `RecoBox-installer-e2e-diagnostics-33942125612` is retained until 2026-09-12.
+- Owner acceptance remains pending; the PR stays unmerged and no tag, formal
+  Release, or `main` modification was made.
 - Startup recovery, explicit recovery-state transitions, and offline hysteresis
   remain later roadmap tasks.

@@ -1,6 +1,6 @@
 # PR-13: Same-session recovery
 
-- Status: local implementation, focused verification, and independent review complete; remote publication, Windows CI, and owner acceptance pending
+- Status: local implementation, focused verification, independent review, remote Draft PR, and Windows CI complete; owner acceptance pending
 - Roadmap target: `0.3.0-06` same-session recovery; package version remains `0.2.1`
 - GitHub issue: [#2 Improve recording recovery after stream interruption](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/issues/2)
 - Local branch: `codex/0.3.0-06-same-session-recovery`
@@ -61,7 +61,9 @@ and exhausted retry budget close the session with distinct durable states.
 - [x] Transient playback URLs remain memory-only.
 - [x] Existing bounded retry and stall behavior remains covered.
 - [x] Final independent Standards/Spec review at fixed point `68a81f3`; both axes returned PASS with no P0–P3 findings.
-- [ ] Remote Draft PR and Windows CI.
+- [x] Draft PR [#17](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/17) published at remote head `c9735602ad7203394d343be67eb538fafcf5a2df`.
+- [x] Windows CI [#47](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33942125612) passed its single job, including the Windows build, installer, and install/upgrade/uninstall smoke.
+- [x] Diagnostic artifact `RecoBox-installer-e2e-diagnostics-33942125612` retained until 2026-09-12; digest `sha256:8ad2471302480171351df62d65d78ce2c9a921e8290fe261ff07a6119babb96c`.
 - [ ] Owner acceptance.
 
 ## Rollback
