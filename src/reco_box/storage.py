@@ -7,10 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from .domain import Room
+from .domain import RecordingSession, RecordingSessionState, Room
 from .errors import safe_error_text
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 class Database:
@@ -76,6 +76,19 @@ class Database:
                     duration_seconds REAL NOT NULL DEFAULT 0,
                     codec_summary TEXT NOT NULL DEFAULT '',
                     probe_error TEXT NOT NULL DEFAULT '',
+                    FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE RESTRICT
+                );
+
+                CREATE TABLE IF NOT EXISTS recording_sessions (
+                    id TEXT PRIMARY KEY,
+                    room_id TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    session_dir TEXT NOT NULL,
+                    attempt INTEGER NOT NULL DEFAULT 0 CHECK (attempt >= 0),
+                    state TEXT NOT NULL DEFAULT 'active',
+                    recovery_reason TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE RESTRICT
                 );
 
@@ -158,10 +171,18 @@ class Database:
                     "INSERT INTO schema_migrations(version) VALUES (?)",
                     (5,),
                 )
-            if SCHEMA_VERSION not in applied_versions:
+            if 6 not in applied_versions:
                 connection.execute(
                     "UPDATE rooms SET line = '线路1' WHERE line = '自动' OR line = ''"
                 )
+                connection.execute(
+                    "INSERT INTO schema_migrations(version) VALUES (?)",
+                    (6,),
+                )
+            if SCHEMA_VERSION not in applied_versions:
+                # The idempotent schema bootstrap creates this table for both
+                # new and existing databases; version 7 records that durable
+                # RecordingSession storage is available.
                 connection.execute(
                     "INSERT INTO schema_migrations(version) VALUES (?)",
                     (SCHEMA_VERSION,),
@@ -219,6 +240,89 @@ class Database:
                 "WHERE id = ?",
                 (room_id,),
             )
+
+    def upsert_recording_session(self, session: RecordingSession) -> None:
+        record = session.to_record()
+        with self.connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO recording_sessions(
+                    id, room_id, started_at, session_dir, attempt, state, recovery_reason
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    room_id = excluded.room_id,
+                    started_at = excluded.started_at,
+                    session_dir = excluded.session_dir,
+                    attempt = excluded.attempt,
+                    state = excluded.state,
+                    recovery_reason = excluded.recovery_reason,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    record["session_id"],
+                    record["room_id"],
+                    record["started_at"],
+                    record["session_dir"],
+                    record["attempt"],
+                    record["state"],
+                    safe_error_text(record["recovery_reason"])
+                    if record["recovery_reason"]
+                    else "",
+                ),
+            )
+
+    def create_recording_session(
+        self,
+        room_id: str,
+        started_at: datetime,
+        session_dir: Path,
+        *,
+        attempt: int = 0,
+        state: RecordingSessionState = RecordingSessionState.ACTIVE,
+        recovery_reason: str = "",
+    ) -> RecordingSession:
+        session = RecordingSession(
+            session_id=str(uuid4()),
+            room_id=room_id,
+            started_at=started_at,
+            session_dir=session_dir,
+            attempt=attempt,
+            state=state,
+            recovery_reason=recovery_reason,
+        )
+        self.upsert_recording_session(session)
+        return session
+
+    def get_recording_session(self, session_id: str) -> RecordingSession | None:
+        with self.connection() as connection:
+            row = connection.execute(
+                """
+                SELECT id AS session_id, room_id, started_at, session_dir,
+                       attempt, state, recovery_reason
+                FROM recording_sessions
+                WHERE id = ?
+                """,
+                (session_id,),
+            ).fetchone()
+        return RecordingSession.from_record(dict(row)) if row else None
+
+    def list_recording_sessions(
+        self, room_id: str | None = None
+    ) -> list[RecordingSession]:
+        query = """
+            SELECT id AS session_id, room_id, started_at, session_dir,
+                   attempt, state, recovery_reason
+            FROM recording_sessions
+        """
+        parameters: tuple[str, ...] = ()
+        if room_id is not None:
+            query += " WHERE room_id = ?"
+            parameters = (room_id,)
+        query += " ORDER BY started_at ASC, id ASC"
+        with self.connection() as connection:
+            rows = connection.execute(query, parameters).fetchall()
+        return [RecordingSession.from_record(dict(row)) for row in rows]
 
     def start_recording(
         self,
@@ -400,3 +504,4 @@ class Database:
                 """,
                 (key, value),
             )
+

@@ -5,7 +5,7 @@
 - Status: ACTIVE
 - Current package version: `0.2.1` (single source: `pyproject.toml`).
 - Current maintenance roadmap target: `0.3.0`.
-- The latest maintenance record is [PR-11 Recording stall detection](maintenance/2026-09-05-pr-11-stall-detection.md).
+- The latest maintenance record is [PR-12 RecordingSession abstraction](maintenance/2026-09-05-pr-12-recording-session.md).
 
 ## Confirmed PR-06 boundary
 
@@ -115,7 +115,27 @@ from this durable product document.
   with both failures caused by missing local FFmpeg/ffprobe runtime files.
 - Draft PR [#15](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/15) is open/draft,
   with remote implementation head `94caa50f9e56fd8df484127bb0dc39e8e8f51299`; Windows CI [#43](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33935714737)
-  succeeded. Its single job and diagnostic artifact are recorded remotely. The final independent
-  Standards/Spec review found no P0/P1/P2 issue; owner acceptance remains open.
+  succeeded. Its single job and diagnostic artifact are recorded remotely. The follow-up documentation
+  head is `ef876a0777578b445322d3aaaff1d8a003edcd6a`, and Windows CI [#44](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33936295055)
+  also succeeded. The final independent Standards/Spec review found no P0/P1/P2 issue; owner acceptance
+  remains open.
 - The next strictly ordered scope after PR-11 is `0.3.0-05` RecordingSession.
+
+## Confirmed PR-12 boundary
+
+- `RecordingSession` represents one logical livestream occurrence independently
+  of any single FFmpeg process. It carries the session identity, room, start
+  time, stable output directory, attempt, lifecycle state, and recovery reason.
+- Schema version 7 adds a dedicated `recording_sessions` table and a small
+  database interface for create, upsert, fetch, and room-filtered listing.
+- `last_stream_url` is an in-memory-only field and is excluded from model
+  serialization and SQLite persistence because resolved playback addresses are
+  transient and sensitive.
+- `SessionPathPlanner` and `FFmpegPlanner.build_for_session(...)` establish a
+  caller-owned directory seam; the existing `FFmpegPlanner.build(...)` path and
+  `RecordingManager` behavior are unchanged in this PR.
+- Same-session recovery, attempt-specific output numbering, state-machine
+  transitions, and stale-session repair remain later roadmap tasks.
+- The final independent Standards/Spec review of PR-12 found no P0-P2 or
+  other actionable issue; remote publication and Windows CI remain pending.
 
