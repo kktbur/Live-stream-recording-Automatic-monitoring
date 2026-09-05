@@ -73,6 +73,10 @@
 - job：`Test, build, and self-check`，结论为 `success`。
 - 诊断 artifact：`RecoBox-installer-e2e-diagnostics-33935714737`，SHA-256 为
   `fa0d5b23425367be33f7b06afeec4a47a25287207e81b3eb46c60859d6776de2`，保留至 2026-09-12。
+- 文档同步 head：`ef876a0777578b445322d3aaaff1d8a003edcd6a`；Windows CI
+  [run #44](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33936295055)
+  结论为 `success`。诊断 artifact `RecoBox-installer-e2e-diagnostics-33936295055` 的 SHA-256 为
+  `5c8d5175cc04226ff7cc9c9323b23c0b4e69102b8d9128c5eb5d418bf539149c`，保留至 2026-09-12。
 
 ## 证据边界
 

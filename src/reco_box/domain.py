@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,15 @@ class RoomStatus(StrEnum):
     CONVERTING = "converting"
     RETRYING = "retrying"
     ERROR = "error"
+
+
+class RecordingSessionState(StrEnum):
+    """Lifecycle states for one logical live broadcast."""
+
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    ABANDONED = "abandoned"
 
 
 class Platform(StrEnum):
@@ -91,6 +101,58 @@ class Room:
         return cls(**values)
 
 
+@dataclass(slots=True)
+class RecordingSession:
+    """The logical broadcast that may contain several FFmpeg attempts."""
+
+    session_id: str
+    room_id: str
+    started_at: datetime
+    session_dir: Path
+    attempt: int = 0
+    last_stream_url: str = field(default="", repr=False, compare=False)
+    state: RecordingSessionState = RecordingSessionState.ACTIVE
+    recovery_reason: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.session_id:
+            raise ValueError("session_id must not be empty")
+        if not self.room_id:
+            raise ValueError("room_id must not be empty")
+        if self.attempt < 0:
+            raise ValueError("attempt must not be negative")
+        self.state = RecordingSessionState(self.state)
+        self.session_dir = Path(self.session_dir)
+
+    def to_record(self) -> dict[str, Any]:
+        """Return only durable fields; transient stream URLs stay in memory."""
+
+        return {
+            "session_id": self.session_id,
+            "room_id": self.room_id,
+            "started_at": self.started_at.isoformat(),
+            "session_dir": str(self.session_dir),
+            "attempt": self.attempt,
+            "state": self.state.value,
+            "recovery_reason": self.recovery_reason,
+        }
+
+    @classmethod
+    def from_record(cls, record: dict[str, Any]) -> RecordingSession:
+        values = dict(record)
+        if "session_id" not in values and "id" in values:
+            values["session_id"] = values.pop("id")
+        started_at = values.get("started_at")
+        if isinstance(started_at, str):
+            values["started_at"] = datetime.fromisoformat(started_at)
+        values["session_dir"] = Path(values.get("session_dir", ""))
+        values["state"] = RecordingSessionState(
+            values.get("state", RecordingSessionState.ACTIVE.value)
+        )
+        values["attempt"] = int(values.get("attempt", 0))
+        return cls(**values)
+
+
 @dataclass(slots=True, frozen=True)
 class RecordingPlan:
     room_id: str
@@ -99,3 +161,4 @@ class RecordingPlan:
     session_dir: Path
     command: tuple[str, ...]
     output_pattern: Path
+

@@ -120,8 +120,36 @@ for platform-by-platform certificate-compatibility evidence.
   The two known failures require local `runtime/ffmpeg/ffmpeg.exe` and `ffprobe.exe` files.
 - `ruff check src tests`, compileall, and `git diff --check` passed. Draft PR [#15](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/15)
   is open/draft and Windows CI [#43](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33935714737)
-  succeeded; its single job and diagnostic artifact are recorded remotely. The final independent
-  Standards/Spec review found no P0/P1/P2 issue, and owner acceptance remains pending.
+  succeeded; its single job and diagnostic artifact are recorded remotely. The documentation follow-up
+  head `ef876a0777578b445322d3aaaff1d8a003edcd6a` also passed Windows CI [#44](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33936295055).
+  The final independent Standards/Spec review found no P0/P1/P2 issue, and owner acceptance remains pending.
 - Explicit non-goals: no `RecordingSession`, same-session recovery, recovery state machine, offline
   hysteresis, crash recovery, or pressure/fault injection.
+
+## PR-12 current acceptance
+
+- Scope: `0.3.0-05` RecordingSession; the package version remains `0.2.1`.
+- `RecordingSession` is the logical broadcast identity and is distinct from an
+  individual FFmpeg attempt. Its durable fields are session ID, room ID, start
+  time, stable session directory, attempt, state, and safe recovery reason.
+- Schema version 7 adds a dedicated session table and database round-trip methods.
+  Existing `recordings` history and `RecordingManager` behavior are not migrated
+  or changed in this PR.
+- `last_stream_url` remains memory-only and is deliberately excluded from
+  serialization and SQLite. This preserves the repository rule that transient
+  playback addresses are never persisted or logged.
+- `SessionPathPlanner` owns directory selection; `FFmpegPlanner.build_for_session(...)`
+  accepts a caller-owned directory for future recovery, while `build(...)` retains
+  its existing fresh-directory behavior.
+- Local Session/planner/storage tests are `19 passed`; Ruff and compileall passed.
+- Explicit non-goals: no same-session recovery, attempt-specific output numbering,
+  recovery state machine, offline hysteresis, crash recovery, or package-version change.
+- Final independent Standards/Spec review found no P0-P2 or other actionable issue.
+  Draft PR [#16](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/16)
+  is open/draft at head `7400697d439484311da0860eec69be8229bac7d6`. Windows CI
+  [#45](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33938312883)
+  passed its single job, including Windows build, installer, and install/upgrade/uninstall smoke.
+  Diagnostic artifact `RecoBox-installer-e2e-diagnostics-33938312883` has digest
+  `sha256:18411502d1f8d6b6d485e4a20b575c5318c265240633d5f763ca43f03a802b15` and is retained until
+  2026-09-12; owner acceptance remains pending.
 
