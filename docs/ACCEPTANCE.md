@@ -145,5 +145,11 @@ for platform-by-platform certificate-compatibility evidence.
 - Explicit non-goals: no same-session recovery, attempt-specific output numbering,
   recovery state machine, offline hysteresis, crash recovery, or package-version change.
 - Final independent Standards/Spec review found no P0-P2 or other actionable issue.
-  Remote Draft PR, Windows CI, and owner acceptance remain pending.
+  Draft PR [#16](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/16)
+  is open/draft at head `7400697d439484311da0860eec69be8229bac7d6`. Windows CI
+  [#45](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33938312883)
+  passed its single job, including Windows build, installer, and install/upgrade/uninstall smoke.
+  Diagnostic artifact `RecoBox-installer-e2e-diagnostics-33938312883` has digest
+  `sha256:18411502d1f8d6b6d485e4a20b575c5318c265240633d5f763ca43f03a802b15` and is retained until
+  2026-09-12; owner acceptance remains pending.
 

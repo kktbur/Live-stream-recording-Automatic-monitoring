@@ -1,6 +1,6 @@
 # PR-12: RecordingSession abstraction
 
-- Status: local model, persistence boundary, tests, documentation, and independent review complete; remote publication and owner acceptance pending
+- Status: local model, persistence boundary, tests, documentation, independent review, remote Draft PR, and Windows CI complete; owner acceptance pending
 - Roadmap target: `0.3.0-05` RecordingSession; package version remains `0.2.1`
 - GitHub issue: [#2 Improve recording recovery after stream interruption](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/issues/2)
 - Local branch: `codex/0.3.0-05-recording-session`
@@ -56,7 +56,9 @@ the existing `FFmpegPlanner.build(...)` compatibility path.
 - [x] The transient stream URL is proven not to be serialized or stored.
 - [x] Existing `FFmpegPlanner.build(...)` tests remain green.
 - [x] Independent Standards/Spec review at the final fixed point; both axes found no P0-P2 or other actionable issue.
-- [ ] Remote Draft PR and Windows CI.
+- [x] Draft PR [#16](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/16) published at head `7400697d439484311da0860eec69be8229bac7d6`.
+- [x] Windows CI [#45](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33938312883) passed its single job, including the Windows build, installer, and install/upgrade/uninstall smoke.
+- [x] Diagnostic artifact `RecoBox-installer-e2e-diagnostics-33938312883` retained until 2026-09-12; digest `sha256:18411502d1f8d6b6d485e4a20b575c5318c265240633d5f763ca43f03a802b15`.
 - [ ] Owner acceptance.
 
 ## Rollback

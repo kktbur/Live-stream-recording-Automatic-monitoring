@@ -137,5 +137,9 @@ from this durable product document.
 - Same-session recovery, attempt-specific output numbering, state-machine
   transitions, and stale-session repair remain later roadmap tasks.
 - The final independent Standards/Spec review of PR-12 found no P0-P2 or
-  other actionable issue; remote publication and Windows CI remain pending.
+  other actionable issue. Draft PR [#16](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/16)
+  is open/draft at head `7400697d439484311da0860eec69be8229bac7d6`; Windows CI
+  [#45](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33938312883)
+  passed its single job, including Windows build, installer, and install/upgrade/uninstall smoke.
+  The diagnostic artifact is retained until 2026-09-12; owner acceptance remains open.
 
