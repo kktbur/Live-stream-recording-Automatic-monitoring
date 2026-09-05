@@ -5,7 +5,7 @@
 - Status: ACTIVE
 - Current package version: `0.2.1` (single source: `pyproject.toml`).
 - Current maintenance roadmap target: `0.3.0`.
-- The latest maintenance record is [PR-12 RecordingSession abstraction](maintenance/2026-09-05-pr-12-recording-session.md).
+- The latest maintenance record is [PR-13 Same-session recovery](maintenance/2026-09-05-pr-13-same-session-recovery.md).
 
 ## Confirmed PR-06 boundary
 
@@ -143,3 +143,27 @@ from this durable product document.
   passed its single job, including Windows build, installer, and install/upgrade/uninstall smoke.
   The diagnostic artifact is retained until 2026-09-12; owner acceptance remains open.
 
+## Confirmed PR-13 boundary
+
+- `RecordingManager` now creates one active `RecordingSession` for a first
+  attempt and retains it across eligible automatic retry cycles. A retry
+  re-resolves the stream but reuses the durable session directory.
+- Recovery output advances from the highest existing number in that directory:
+  segmented output advances `-segment_start_number`, while unsegmented output
+  advances from `1.ts` to `2.ts` (custom names receive a numeric suffix), and
+  deleted numbers are not reused.
+- The session ID feeds legacy `group_id` history aggregation and the current
+  session attempt feeds `recovery_index`; the existing bounded retry delay is
+  unchanged.
+- Clean completion, manual stop, protective stop, and exhausted retry are
+  persisted as `completed`, `abandoned`, or `failed`; an eligible failed
+  attempt remains `active` for the next check. `last_stream_url` remains memory-only.
+- A manual pause while recovery is pending abandons the active session, and a
+  recovery disk preflight failure marks it `failed` before a new attempt starts.
+- Only a non-live resolver result without a resolver failure closes a recoverable
+  active session before a later broadcast can create a new one; PR-14 will add
+  continuous offline confirmation before this boundary is applied.
+- Fixed point `68a81f3` passed the final independent Standards and Spec reviews;
+  remote Draft PR and Windows CI remain the next release evidence gates.
+- Startup recovery, explicit recovery-state transitions, and offline hysteresis
+  remain later roadmap tasks.

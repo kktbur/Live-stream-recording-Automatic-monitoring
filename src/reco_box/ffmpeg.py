@@ -7,7 +7,11 @@ from pathlib import Path
 
 from .domain import RecordingPlan, Room
 from .localization import tr
-from .output_paths import create_session_directory, segment_output_pattern, single_output_path
+from .output_paths import (
+    create_session_directory,
+    numbered_single_output_path,
+    segment_output_pattern,
+)
 
 
 @dataclass(slots=True, frozen=True)
@@ -39,17 +43,26 @@ class FFmpegPlanner:
         return self.build_for_session(room, stream, session_dir)
 
     def build_for_session(
-        self, room: Room, stream: StreamInput, session_dir: Path
+        self,
+        room: Room,
+        stream: StreamInput,
+        session_dir: Path,
+        *,
+        start_number: int = 1,
     ) -> RecordingPlan:
         """Build one FFmpeg attempt under a caller-owned session directory."""
 
         self._validate_room(room)
+        if start_number < 1:
+            raise ValueError("start_number must be positive")
 
         session_dir = Path(session_dir)
         output = (
             segment_output_pattern(session_dir, room.output_format)
             if room.segment_enabled
-            else single_output_path(session_dir, room.output_format, room.file_name)
+            else numbered_single_output_path(
+                session_dir, room.output_format, room.file_name, start_number
+            )
         )
 
         command = [
@@ -90,7 +103,7 @@ class FFmpegPlanner:
                     "-segment_time",
                     str(room.segment_minutes * 60),
                     "-segment_start_number",
-                    "1",
+                    str(start_number),
                     "-reset_timestamps",
                     "1",
                 ]
@@ -118,4 +131,3 @@ def hidden_startup_info() -> subprocess.STARTUPINFO | None:
     startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startup.wShowWindow = subprocess.SW_HIDE
     return startup
-

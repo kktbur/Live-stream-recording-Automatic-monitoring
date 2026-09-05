@@ -79,6 +79,7 @@ def main() -> int:
     _connect_resolver_rate_limit_settings(settings, monitor)
     preview = PreviewController(monitor)
     monitor.liveDetected.connect(recorder.start_for_room)
+    monitor.streamOffline.connect(recorder.handle_stream_offline)
     recorder.retryRequested.connect(monitor.schedule_retry)
     recorder.recordingCompleted.connect(history.refresh)
     recorder.recordingCompleted.connect(event_log.refresh)

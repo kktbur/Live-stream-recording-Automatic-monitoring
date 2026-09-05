@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from PySide6.QtCore import QObject, QProcess, QRunnable, QThreadPool, QTimer, Signal, Slot
 
-from .domain import RoomStatus
+from .domain import RecordingSession, RecordingSessionState, RoomStatus
 from .errors import (
     DiskFull,
     FFmpegFailed,
@@ -24,6 +24,7 @@ from .errors import (
 from .ffmpeg import FFmpegPlanner, StreamInput, hidden_startup_info
 from .localization import tr
 from .media_probe import ProbeResult, find_ffprobe, media_files, probe_media_files
+from .output_paths import next_session_output_number
 from .resolver import ResolvedStream
 from .resources import application_resource
 from .room_model import RoomListModel
@@ -175,7 +176,7 @@ class ProbeWorker(QRunnable):
 
 
 class ConversionSignals(QObject):
-    completed = Signal(str, str, object, bool, object)
+    completed = Signal(str, str, object, bool, object, bool)
 
 
 class ConversionWorker(QRunnable):
@@ -186,6 +187,7 @@ class ConversionWorker(QRunnable):
         ffmpeg_path: Path,
         session_dir: Path,
         pause_monitoring: bool,
+        intentional_stop: bool = False,
     ):
         super().__init__()
         self.room_id = room_id
@@ -193,6 +195,7 @@ class ConversionWorker(QRunnable):
         self.ffmpeg_path = ffmpeg_path
         self.session_dir = session_dir
         self.pause_monitoring = pause_monitoring
+        self.intentional_stop = intentional_stop
         self.signals = ConversionSignals()
 
     @Slot()
@@ -204,6 +207,7 @@ class ConversionWorker(QRunnable):
             self.session_dir,
             self.pause_monitoring,
             result,
+            self.intentional_stop,
         )
 
 
@@ -232,6 +236,7 @@ class RecordingManager(QObject):
         self.converting_rooms: set[str] = set()
         self.recording_ids: dict[str, str] = {}
         self.session_dirs: dict[str, Path] = {}
+        self.recording_sessions: dict[str, RecordingSession] = {}
         self.started_monotonic: dict[str, float] = {}
         self.manual_stops: set[str] = set()
         self.pause_after_stops: set[str] = set()
@@ -269,16 +274,43 @@ class RecordingManager(QObject):
             return
 
         started_at = datetime.now().astimezone()
+        stream = StreamInput(
+            self._selected_stream_url(room.line, resolved.stream_urls),
+            headers=resolved.headers,
+            proxy=room.proxy,
+        )
+        planner = FFmpegPlanner(self.ffmpeg_path)
+        current_session = self.recording_sessions.get(room_id)
         try:
-            plan = FFmpegPlanner(self.ffmpeg_path).build(
-                room,
-                StreamInput(
-                    self._selected_stream_url(room.line, resolved.stream_urls),
-                    headers=resolved.headers,
-                    proxy=room.proxy,
-                ),
-                started_at,
-            )
+            if current_session is None or current_session.state is not RecordingSessionState.ACTIVE:
+                plan = planner.build(room, stream, started_at)
+                session = RecordingSession(
+                    session_id=str(uuid4()),
+                    room_id=room_id,
+                    started_at=started_at,
+                    session_dir=plan.session_dir,
+                    last_stream_url=stream.url,
+                )
+            else:
+                start_number = next_session_output_number(
+                    current_session.session_dir,
+                    room.output_format,
+                    "" if room.segment_enabled else room.file_name,
+                )
+                plan = planner.build_for_session(
+                    room,
+                    stream,
+                    current_session.session_dir,
+                    start_number=start_number,
+                )
+                session = RecordingSession(
+                    session_id=current_session.session_id,
+                    room_id=room_id,
+                    started_at=current_session.started_at,
+                    session_dir=current_session.session_dir,
+                    attempt=current_session.attempt + 1,
+                    last_stream_url=stream.url,
+                )
         except ValueError as error:
             failure = classify_recording_error(error)
             self.last_recording_failures[room_id] = failure
@@ -295,6 +327,14 @@ class RecordingManager(QObject):
                     minimum_free_gb=minimum_free_gb
                 )
             )
+            if (
+                current_session is not None
+                and current_session.state is RecordingSessionState.ACTIVE
+            ):
+                self.retry_counts.pop(room_id, None)
+                self._finish_session(
+                    room_id, RecordingSessionState.FAILED, failure.kind.value
+                )
             self.last_recording_failures[room_id] = failure
             self.rooms.update_room_state(
                 room_id,
@@ -303,6 +343,8 @@ class RecordingManager(QObject):
             )
             return
 
+        self.recording_sessions[room_id] = session
+        self.database.upsert_recording_session(session)
         self.last_recording_failures.pop(room_id, None)
         process = QProcess(self)
         process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
@@ -319,16 +361,51 @@ class RecordingManager(QObject):
         self.started_monotonic.pop(room_id, None)
         self.last_growth_at.pop(room_id, None)
         self.last_disk_checks[room_id] = 0
-        group_id = self.session_groups.setdefault(room_id, str(uuid4()))
-        recovery_index = self.recovery_indices.get(room_id, 0)
+        self.session_groups[room_id] = session.session_id
+        self.recovery_indices[room_id] = session.attempt
         self.recording_ids[room_id] = self.database.start_recording(
             room_id,
             started_at,
             plan.session_dir,
-            group_id=group_id,
-            recovery_index=recovery_index,
+            group_id=session.session_id,
+            recovery_index=session.attempt,
         )
         process.start()
+
+    def _retain_session_for_recovery(
+        self, room_id: str, failure: RecordingFailure | None
+    ) -> None:
+        session = self.recording_sessions.get(room_id)
+        if session is None:
+            return
+        session.state = RecordingSessionState.ACTIVE
+        session.recovery_reason = failure.kind.value if failure else "ffmpeg_failed"
+        self.database.upsert_recording_session(session)
+        self.session_groups[room_id] = session.session_id
+        self.recovery_indices[room_id] = session.attempt + 1
+
+    def _finish_session(
+        self,
+        room_id: str,
+        state: RecordingSessionState,
+        recovery_reason: str = "",
+    ) -> None:
+        session = self.recording_sessions.pop(room_id, None)
+        if session is not None:
+            session.state = state
+            session.recovery_reason = recovery_reason
+            self.database.upsert_recording_session(session)
+        self.session_groups.pop(room_id, None)
+        self.recovery_indices.pop(room_id, None)
+
+    @Slot(str)
+    def handle_stream_offline(self, room_id: str) -> None:
+        """Close a recoverable session after the resolver reports it offline."""
+
+        if room_id in self.processes or room_id in self.converting_rooms:
+            return
+        self.retry_counts.pop(room_id, None)
+        self._finish_session(room_id, RecordingSessionState.COMPLETED, "offline")
 
     def _process_started(self, room_id: str) -> None:
         if room_id not in self.processes:
@@ -411,9 +488,20 @@ class RecordingManager(QObject):
     def stop_room(self, room_id: str) -> None:
         self._request_stop(room_id, pause_monitoring=True)
 
+    def _abandon_pending_session(self, room_id: str) -> None:
+        if room_id not in self.recording_sessions:
+            return
+        self.retry_counts.pop(room_id, None)
+        self._finish_session(room_id, RecordingSessionState.ABANDONED, "manual_stop")
+        self.rooms.update_recording_progress(room_id, 0, 0)
+        self.recordingCompleted.emit()
+
     def _request_stop(self, room_id: str, pause_monitoring: bool) -> None:
         process = self.processes.get(room_id)
         if process is None:
+            if pause_monitoring:
+                self._abandon_pending_session(room_id)
+                self.rooms.set_room_enabled(room_id, False)
             return
         self.manual_stops.add(room_id)
         if pause_monitoring:
@@ -447,6 +535,9 @@ class RecordingManager(QObject):
     @Slot()
     def stopAllAndPause(self) -> None:
         self.rooms.setAllEnabled(False)
+        for room_id in tuple(self.recording_sessions):
+            if room_id not in self.processes and room_id not in self.converting_rooms:
+                self._abandon_pending_session(room_id)
         for room_id in tuple(self.processes):
             self._request_stop(room_id, pause_monitoring=True)
 
@@ -547,6 +638,7 @@ class RecordingManager(QObject):
                 self.ffmpeg_path,
                 session_dir,
                 pause_monitoring,
+                manual_stop,
             )
             worker.signals.completed.connect(self._conversion_finished)
             self.worker_pool.start(worker)
@@ -565,16 +657,24 @@ class RecordingManager(QObject):
                 self._start_probe(recording_id, session_dir)
         if protective_error:
             self.retry_counts.pop(room_id, None)
-            self.session_groups.pop(room_id, None)
-            self.recovery_indices.pop(room_id, None)
+            self._finish_session(
+                room_id,
+                RecordingSessionState.FAILED,
+                failure.kind.value if failure else "disk_full",
+            )
             room = self.rooms.get_room(room_id)
             delay = room.check_interval_seconds if room else 300
             self.rooms.update_room_state(room_id, RoomStatus.ERROR, error=str(failure))
             self.retryRequested.emit(room_id, delay)
         elif success:
             self.retry_counts.pop(room_id, None)
-            self.session_groups.pop(room_id, None)
-            self.recovery_indices.pop(room_id, None)
+            self._finish_session(
+                room_id,
+                RecordingSessionState.ABANDONED
+                if manual_stop
+                else RecordingSessionState.COMPLETED,
+                "manual_stop" if manual_stop else "",
+            )
             if pause_monitoring:
                 self.rooms.set_room_enabled(room_id, False)
             else:
@@ -585,7 +685,9 @@ class RecordingManager(QObject):
             room = self.rooms.get_room(room_id)
             if attempt <= 5:
                 delay = recording_retry_delay(attempt)
-                self.recovery_indices[room_id] = attempt
+                if room_id not in self.recording_sessions:
+                    self.recovery_indices[room_id] = attempt
+                self._retain_session_for_recovery(room_id, failure)
                 self.rooms.update_room_state(
                     room_id,
                     RoomStatus.RETRYING,
@@ -594,8 +696,11 @@ class RecordingManager(QObject):
             else:
                 delay = room.check_interval_seconds if room else 300
                 self.retry_counts.pop(room_id, None)
-                self.session_groups.pop(room_id, None)
-                self.recovery_indices.pop(room_id, None)
+                self._finish_session(
+                    room_id,
+                    RecordingSessionState.FAILED,
+                    failure.kind.value if failure else "ffmpeg_failed",
+                )
                 self.rooms.update_room_state(
                     room_id,
                     RoomStatus.ERROR,
@@ -605,7 +710,7 @@ class RecordingManager(QObject):
         self.rooms.update_recording_progress(room_id, 0, total_bytes)
         self.recordingCompleted.emit()
 
-    @Slot(str, str, object, bool, object)
+    @Slot(str, str, object, bool, object, bool)
     def _conversion_finished(
         self,
         room_id: str,
@@ -613,6 +718,7 @@ class RecordingManager(QObject):
         session_dir: Path,
         pause_monitoring: bool,
         result: ConversionResult,
+        intentional_stop: bool = False,
     ) -> None:
         self.converting_rooms.discard(room_id)
         failure = result.failure
@@ -636,8 +742,19 @@ class RecordingManager(QObject):
         if result.success:
             self._start_probe(recording_id, session_dir)
         self.retry_counts.pop(room_id, None)
-        self.session_groups.pop(room_id, None)
-        self.recovery_indices.pop(room_id, None)
+        self._finish_session(
+            room_id,
+            RecordingSessionState.ABANDONED
+            if intentional_stop
+            else (
+                RecordingSessionState.COMPLETED
+                if result.success
+                else RecordingSessionState.FAILED
+            ),
+            "manual_stop"
+            if intentional_stop
+            else ("" if result.success else (failure.kind.value if failure else "ffmpeg_failed")),
+        )
         if pause_monitoring:
             self.rooms.set_room_enabled(room_id, False)
             if error_message:

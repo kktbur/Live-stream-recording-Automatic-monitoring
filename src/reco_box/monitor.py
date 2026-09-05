@@ -47,6 +47,7 @@ class ResolverWorker(QRunnable):
 
 class MonitoringCoordinator(QObject):
     liveDetected = Signal(str, object)
+    streamOffline = Signal(str)
 
     def __init__(
         self,
@@ -168,6 +169,8 @@ class MonitoringCoordinator(QObject):
                 streamer_name=result.streamer_name,
                 title=result.title,
             )
+            if result.failure is None:
+                self.streamOffline.emit(room_id)
 
     @Slot(str, object)
     def _failed(self, room_id: str, failure: ResolverError | str) -> None:

@@ -70,6 +70,44 @@ def test_build_for_session_reuses_a_caller_owned_directory(tmp_path) -> None:
     assert not session_dir.exists()
 
 
+def test_build_for_session_starts_numbered_attempt_at_requested_value(tmp_path) -> None:
+    room = Room(
+        url="https://example.com/live",
+        streamer_name="主播",
+        save_root=str(tmp_path),
+        segment_enabled=True,
+        segment_minutes=5,
+    )
+    session_dir = tmp_path / "stable-session"
+    session_dir.mkdir()
+
+    plan = FFmpegPlanner(Path("ffmpeg.exe")).build_for_session(
+        room,
+        StreamInput("https://cdn.example.com/live.flv"),
+        session_dir,
+        start_number=3,
+    )
+
+    assert plan.output_pattern == session_dir / "%d.ts"
+    assert plan.command[plan.command.index("-segment_start_number") + 1] == "3"
+
+
+def test_build_for_session_numbers_a_single_file_attempt(tmp_path) -> None:
+    room = Room(url="https://example.com/live", save_root=str(tmp_path))
+    session_dir = tmp_path / "stable-session"
+    session_dir.mkdir()
+    (session_dir / "1.ts").write_bytes(b"previous attempt")
+
+    plan = FFmpegPlanner(Path("ffmpeg.exe")).build_for_session(
+        room,
+        StreamInput("https://cdn.example.com/live.flv"),
+        session_dir,
+        start_number=2,
+    )
+
+    assert plan.output_pattern == session_dir / "2.ts"
+
+
 def test_invalid_segment_minutes_are_rejected(tmp_path) -> None:
     room = Room(
         url="https://example.com/live",
@@ -113,4 +151,3 @@ def test_audio_formats_use_compatible_audio_codec(tmp_path, output_format, codec
     )
     assert "-vn" in plan.command
     assert plan.command[plan.command.index("-c:a") + 1] == codec
-

@@ -153,3 +153,31 @@ for platform-by-platform certificate-compatibility evidence.
   `sha256:18411502d1f8d6b6d485e4a20b575c5318c265240633d5f763ca43f03a802b15` and is retained until
   2026-09-12; owner acceptance remains pending.
 
+## PR-13 current acceptance
+
+- Scope: `0.3.0-06` same-session recovery; the package version remains `0.2.1`.
+- The current bounded retry path creates one active `RecordingSession` per
+  logical livestream and reuses its stable directory after eligible FFmpeg
+  failures, while resolving a fresh transient stream URL for each attempt.
+- Recovery advances from the highest existing output number in the session
+  directory without reusing a deleted number; compatibility `group_id` uses the
+  session ID and `recovery_index` uses the session attempt.
+- Clean completion, manual stop, protective stop, and exhausted retry have
+  explicit durable session outcomes. `last_stream_url` is memory-only and is
+  excluded from SQLite, logs, and evidence.
+- A manual pause while a retry is pending abandons the active Session, and a
+  recovery disk preflight failure closes it as `failed`.
+- A non-live resolver result closes a recoverable Session only when it carries
+  no resolver failure; error-bearing offline-shaped results remain eligible for
+  later retry.
+- Focused tests are `50 passed`; the full suite is `197 total, 195 passed、2 failed`;
+  both failures require the local FFmpeg/ffprobe runtime assets. Ruff,
+  compileall, and `git diff --check` passed.
+- Final independent Standards and Spec review of fixed point `68a81f3` both
+  returned PASS with no P0–P3 findings.
+- Explicit non-goals: no startup recovery, recovery state machine, offline
+  hysteresis, package-version change, merge, tag, formal Release, or `main`
+  modification.
+- A successful non-live resolver result closes a recoverable session before a
+  later broadcast starts, while continuous offline confirmation remains PR-14
+  work.

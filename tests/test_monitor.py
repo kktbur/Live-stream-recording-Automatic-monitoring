@@ -52,6 +52,8 @@ def test_monitor_retains_platform_failure_on_compatible_offline_result(tmp_path)
     rooms = RoomListModel(database)
     coordinator = MonitoringCoordinator(rooms, object())
     failure = AccessRestricted("anonymous access denied")
+    offline_rooms: list[str] = []
+    coordinator.streamOffline.connect(offline_rooms.append)
 
     coordinator._resolved(
         room.id,
@@ -60,6 +62,7 @@ def test_monitor_retains_platform_failure_on_compatible_offline_result(tmp_path)
 
     assert coordinator.last_resolver_failures[room.id] is failure
     assert rooms.get_room(room.id).status is RoomStatus.OFFLINE
+    assert offline_rooms == []
 
     coordinator._resolved(
         room.id,
@@ -67,6 +70,7 @@ def test_monitor_retains_platform_failure_on_compatible_offline_result(tmp_path)
     )
 
     assert room.id not in coordinator.last_resolver_failures
+    assert offline_rooms == [room.id]
 
 
 def test_check_all_now_clears_wait_for_every_enabled_room(monkeypatch, tmp_path) -> None:

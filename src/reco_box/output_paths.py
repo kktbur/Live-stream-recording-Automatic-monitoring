@@ -48,8 +48,57 @@ def segment_output_pattern(session_dir: Path, extension: str) -> Path:
 
 
 def single_output_path(session_dir: Path, extension: str, file_name: str = "") -> Path:
+    return numbered_single_output_path(session_dir, extension, file_name)
+
+
+def numbered_single_output_path(
+    session_dir: Path,
+    extension: str,
+    file_name: str = "",
+    sequence_number: int = 1,
+) -> Path:
     normalized = extension.lower().lstrip(".")
     if not normalized or not normalized.isalnum():
         raise ValueError(tr("输出格式必须是简单扩展名"))
-    base_name = sanitize_component(file_name, "1") if file_name.strip() else "1"
+    if sequence_number < 1:
+        raise ValueError("sequence_number must be positive")
+    if file_name.strip():
+        base_name = sanitize_component(file_name, "1")
+        if sequence_number > 1:
+            base_name = f"{base_name}_{sequence_number}"
+    else:
+        base_name = str(sequence_number)
     return Path(session_dir) / f"{base_name}.{normalized}"
+
+
+def next_session_output_number(
+    session_dir: Path, extension: str, file_name: str = ""
+) -> int:
+    """Return the next monotonic output number for a session folder."""
+
+    normalized = extension.lower().lstrip(".")
+    if not normalized or not normalized.isalnum():
+        raise ValueError(tr("输出格式必须是简单扩展名"))
+    directory = Path(session_dir)
+    paths = tuple(directory.iterdir()) if directory.exists() else ()
+    if file_name.strip():
+        base_name = sanitize_component(file_name, "1")
+        sequence_number = 1
+        while any(
+            path.is_file()
+            and path.stem == (
+                base_name
+                if sequence_number == 1
+                else f"{base_name}_{sequence_number}"
+            )
+            for path in paths
+        ):
+            sequence_number += 1
+        return sequence_number
+
+    numbers = [
+        int(path.stem)
+        for path in paths
+        if path.is_file() and path.stem.isdecimal()
+    ]
+    return max(numbers, default=0) + 1
