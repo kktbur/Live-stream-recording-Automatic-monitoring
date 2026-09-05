@@ -113,9 +113,9 @@ from this durable product document.
   can be monitored again; this guard does not claim full crash recovery.
 - Local PR-11 focused tests are `28 passed`; the full suite is `179 total, 177 passed、2 failed、5 warnings`,
   with both failures caused by missing local FFmpeg/ffprobe runtime files.
-- Draft PR and remote Windows CI are not published yet; the final independent Standards/Spec review found no
-  P0/P1/P2 issue, while owner acceptance remains open.
-- The remote PR-11 branch is still at the PR-10 documentation base. The explicitly authorized QML/test
-  objects and PR-11 documentation objects were created, but remaining implementation source and translation
-  objects are not yet complete; no PR-11 commit or CI run exists.
+- Draft PR [#15](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/15) is open/draft,
+  with remote implementation head `94caa50f9e56fd8df484127bb0dc39e8e8f51299`; Windows CI [#43](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33935714737)
+  succeeded. Its single job and diagnostic artifact are recorded remotely. The final independent
+  Standards/Spec review found no P0/P1/P2 issue; owner acceptance remains open.
 - The next strictly ordered scope after PR-11 is `0.3.0-05` RecordingSession.
+

@@ -118,11 +118,10 @@ for platform-by-platform certificate-compatibility evidence.
   non-Chinese translation TS/QM catalogs are aligned.
 - Local evidence: 28 focused tests passed; the full suite has `179 total, 177 passed、2 failed、5 warnings`.
   The two known failures require local `runtime/ffmpeg/ffmpeg.exe` and `ffprobe.exe` files.
-- `ruff check src tests`, compileall, and `git diff --check` passed. Draft PR and remote Windows CI
-  remain pending; the final independent Standards/Spec review found no P0/P1/P2 issue, and owner
-  acceptance remains pending.
-- The authorized QML/test and PR-11 documentation objects have been prepared remotely, but the remaining
-  implementation source and translation objects are not complete; the remote branch has no PR-11 commit,
-  Draft PR, or CI run yet.
+- `ruff check src tests`, compileall, and `git diff --check` passed. Draft PR [#15](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/15)
+  is open/draft and Windows CI [#43](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33935714737)
+  succeeded; its single job and diagnostic artifact are recorded remotely. The final independent
+  Standards/Spec review found no P0/P1/P2 issue, and owner acceptance remains pending.
 - Explicit non-goals: no `RecordingSession`, same-session recovery, recovery state machine, offline
   hysteresis, crash recovery, or pressure/fault injection.
+

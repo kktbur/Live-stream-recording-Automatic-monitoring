@@ -1,12 +1,12 @@
 # PR-11：录制卡顿检测
 
-- 状态：本地实现、验证和独立复审完成；Draft PR/远程 Windows CI 待发布，负责人验收待完成
+- 状态：本地实现、验证、独立复审、Draft PR 和远程 Windows CI 完成；负责人验收待完成
 - 路线目标：`0.3.0-04` Stall Detection；本 PR 不修改当前包版本 `0.2.1`
 - 目标仓库：`kktbur/Live-stream-recording-Automatic-monitoring`
 - 本地分支：`codex/0.3.0-04-stall-detection`
 - 本地基线：PR-10 文档同步固定点 `fb000ee`
 - 本地提交固定点：`1e1f233`（实现首提交 `47d5f38`）
-- 当前文档同步 tip：`139f49b`
+- 当前文档同步 tip：`d7b6d06`
 
 ## 范围
 
@@ -55,15 +55,24 @@
 - [x] `STALLED` 状态不会被监控器重复启动，UI 能显示、筛选并限制冲突操作。
 - [x] 应用重启后不会因持久化 `STALLED` 标记永久锁住房间。
 - [x] 定向测试、全量测试（前置条件限制已记录）、Ruff、compileall 和差异检查完成。
-- [ ] Draft PR 发布并通过远程 Windows CI。
+- [x] Draft PR #15 已发布并通过远程 Windows CI #43。
 - [x] 独立 Standards/Spec 审查完成；最终复审未发现 P0/P1/P2。
 - [ ] 负责人验收。
 
-## 最新远程尝试
+## 授权与远程发布记录
 
-在负责人明确授权 `Main.qml` 和 `test_stall_detection.py` 后，这两个对象及 PR-11 文档对象已成功
-创建到 GitHub 对象库；远程分支仍未更新。继续创建 `src/reco_box/domain.py` 时，连接器提示当前
-授权未覆盖其余实现源码，因此停止上传，不创建缺文件提交或改用其他接口绕过。
+负责人先后明确授权 PR-11 源码、翻译资源及其余文件上传；完整 31 文件提交已创建到 GitHub。
+过程中连接器的逐项授权拦截已按授权边界处理，没有改用其他接口绕过。
+
+## Draft PR 与 CI
+
+- Draft PR：[15](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/15)。
+- 远程 head：`94caa50f9e56fd8df484127bb0dc39e8e8f51299`。
+- 目标分支：`codex/0.3.0-02-error-taxonomy`。
+- Windows CI：[run #43](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33935714737)，结论为 `success`。
+- job：`Test, build, and self-check`，结论为 `success`。
+- 诊断 artifact：`RecoBox-installer-e2e-diagnostics-33935714737`，SHA-256 为
+  `fa0d5b23425367be33f7b06afeec4a47a25287207e81b3eb46c60859d6776de2`，保留至 2026-09-12。
 
 ## 证据边界
 
@@ -82,3 +91,4 @@
 
 - [PR-10 维护记录](2026-09-05-pr-10-error-taxonomy.md)
 - [FFmpeg 官方文档](https://ffmpeg.org/ffmpeg.html)
+
