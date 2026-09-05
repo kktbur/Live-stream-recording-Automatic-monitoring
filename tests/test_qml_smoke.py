@@ -98,3 +98,9 @@ def test_room_card_uses_large_file_safe_number_and_preview_play_action() -> None
     assert "required property double fileBytes" in source
     assert "previewController.play(roomId)" in source
     assert "previewController.prepare(roomId)" not in source
+    assert "if (roomEnabled) recordingManager.stop_room(roomId)" in source
+
+    tray_source = (qml_path.parent.parent / "tray.py").read_text(encoding="utf-8")
+    assert "self.recorder.stopAllAndPause" in tray_source
+    assert "lambda: self.rooms.setAllEnabled(False)" not in tray_source
+

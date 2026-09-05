@@ -192,3 +192,31 @@ for platform-by-platform certificate-compatibility evidence.
 - A successful non-live resolver result closes a recoverable session before a
   later broadcast starts, while continuous offline confirmation remains PR-14
   work.
+
+## PR-14 current acceptance
+
+- Scope: `0.3.0-06` Recovery State Machine; the package version remains `0.2.1`.
+- `recovery.py` defines explicit runtime states for checking, preparation,
+  recording, recovery, offline confirmation, conversion, error, stopping, and
+  disabled boundaries. Events are validated by a strict per-room machine and
+  invalid transitions do not mutate state.
+- Monitoring and recording share one `RecoveryStateStore`. Resolver checks move
+  through `CHECKING`; live results enter `PREPARING`; a started process enters
+  `RECORDING`; failed attempts enter `RECOVERING`; retry exhaustion enters
+  `ERROR`; manual stop enters `STOPPING` before `OFFLINE` or `DISABLED`.
+- A clean recording or conversion completion enters `CONFIRMING_OFFLINE` in the
+  runtime machine. Only a later error-free offline resolver result enters
+  `OFFLINE`, preserving the rule that FFmpeg exit alone is not proof of a live
+  stream ending. Existing `RoomStatus` values remain the UI/persistence
+  projection for compatibility.
+- Local evidence: PR-14 state-machine, wiring, session, stall, and retry tests
+  are `49 passed`, with QML smoke tests `2 passed`; the full suite is `216
+  collected, 214 passed、2 known prerequisite failures`; the two known failures require local
+  `runtime/ffmpeg/ffmpeg.exe` and `ffprobe.exe` assets. Ruff, compileall, and
+  `git diff --check` passed.
+- Explicit non-goals: no offline hysteresis, startup crash recovery, persisted
+  runtime state-machine snapshot, package-version change, merge, tag, formal
+  Release, or `main` modification.
+- Remaining gates before this PR is accepted: final independent Standards/Spec
+  review, remote Draft PR, Windows CI with installer E2E, and owner acceptance.
+

@@ -23,6 +23,7 @@
       errors.py               Resolver and recording error taxonomy/classifiers
       scheduler.py            Resolver deadlines, jitter, and retry timing
       rate_limit.py           Resolver concurrency and platform cooldown limits
+      recovery.py             Explicit room lifecycle states and legal event transitions
       recording.py            FFmpeg recording, progress tracking, and stall finalization
       ffmpeg.py               Session path and FFmpeg command planning
       output_paths.py         Safe session directories and collision-free output names
@@ -35,6 +36,8 @@
       test_stall_detection.py Stall predicate and safe-stop regression tests
       test_recording_session.py RecordingSession persistence and privacy tests
       test_same_session_recovery.py Same-session retry directory and output-number tests
+      test_recovery.py         Pure recovery state-machine transition tests
+      test_recovery_integration.py Monitor/recording state-machine wiring tests
       test_settings_controller.py  Settings persistence and monitor wiring tests
     tools/                    Verification and runtime-preparation tools
     packaging/                PyInstaller and Inno Setup inputs
@@ -45,3 +48,4 @@
 Start with `docs/INDEX.md`, then read the applicable maintenance record and ADR.
 For network changes, read `docs/platform-network-security.md` and
 `docs/agents/issue-tracker.md` before changing a platform adapter.
+
