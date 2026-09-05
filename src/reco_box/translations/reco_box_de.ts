@@ -255,6 +255,11 @@
             <translation>Aufnahme</translation>
         </message>
         <message>
+            <location filename="../ui/Main.qml" line="241" />
+            <source>卡顿收尾</source>
+            <translation>Abschluss nach Stillstand</translation>
+        </message>
+        <message>
             <location filename="../ui/Main.qml" line="37" />
             <location filename="../ui/Main.qml" line="241" />
             <source>监控中</source>

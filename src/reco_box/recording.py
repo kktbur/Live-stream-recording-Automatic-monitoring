@@ -16,6 +16,7 @@ from .errors import (
     DiskFull,
     FFmpegFailed,
     RecordingFailure,
+    Stalled,
     classify_recording_error,
     recording_failure_for_exit,
     safe_error_text,
@@ -27,6 +28,9 @@ from .resolver import ResolvedStream
 from .resources import application_resource
 from .room_model import RoomListModel
 from .storage import Database
+
+DEFAULT_STALL_TIMEOUT_SECONDS = 120.0
+STALL_STARTUP_GRACE_SECONDS = 30.0
 
 
 def recording_retry_delay(attempt: int) -> int:
@@ -42,6 +46,28 @@ def recording_succeeded(
     exit_code: int, intentional_stop: bool, protective_error: str = ""
 ) -> bool:
     return (exit_code == 0 or intentional_stop) and not protective_error
+
+
+def should_mark_stalled(
+    *,
+    process_running: bool,
+    file_bytes: int,
+    last_file_bytes: int,
+    started_at: float,
+    last_growth_at: float,
+    now: float,
+    stall_timeout_seconds: float = DEFAULT_STALL_TIMEOUT_SECONDS,
+    startup_grace_seconds: float = STALL_STARTUP_GRACE_SECONDS,
+) -> bool:
+    """Return whether a running recording has exceeded the no-growth window."""
+
+    if not process_running:
+        return False
+    if now - started_at < max(0.0, float(startup_grace_seconds)):
+        return False
+    if file_bytes > last_file_bytes:
+        return False
+    return now - last_growth_at >= max(0.0, float(stall_timeout_seconds))
 
 
 def find_ffmpeg() -> Path | None:
@@ -185,12 +211,22 @@ class RecordingManager(QObject):
     recordingCompleted = Signal()
     retryRequested = Signal(str, int)
 
-    def __init__(self, rooms: RoomListModel, database: Database, ffmpeg_path: Path | None = None):
+    def __init__(
+        self,
+        rooms: RoomListModel,
+        database: Database,
+        ffmpeg_path: Path | None = None,
+        *,
+        stall_timeout_seconds: float = DEFAULT_STALL_TIMEOUT_SECONDS,
+        stall_grace_seconds: float = STALL_STARTUP_GRACE_SECONDS,
+    ):
         super().__init__()
         self.rooms = rooms
         self.database = database
         self.ffmpeg_path = Path(ffmpeg_path) if ffmpeg_path else find_ffmpeg()
         self.ffprobe_path = find_ffprobe()
+        self.stall_timeout_seconds = max(0.0, float(stall_timeout_seconds))
+        self.stall_grace_seconds = max(0.0, float(stall_grace_seconds))
         self.worker_pool = QThreadPool.globalInstance()
         self.processes: dict[str, QProcess] = {}
         self.converting_rooms: set[str] = set()
@@ -202,6 +238,9 @@ class RecordingManager(QObject):
         self.retry_counts: dict[str, int] = {}
         self.session_groups: dict[str, str] = {}
         self.recovery_indices: dict[str, int] = {}
+        self.last_file_bytes: dict[str, int] = {}
+        self.last_growth_at: dict[str, float] = {}
+        self.recovery_reasons: dict[str, RecordingFailure] = {}
         self.last_disk_checks: dict[str, float] = {}
         self.protective_stop_errors: dict[str, str] = {}
         self.last_recording_failures: dict[str, RecordingFailure] = {}
@@ -269,14 +308,16 @@ class RecordingManager(QObject):
         process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         process.setProgram(plan.command[0])
         process.setArguments(list(plan.command[1:]))
-        process.started.connect(lambda: self.rooms.update_room_state(room_id, RoomStatus.RECORDING))
+        process.started.connect(lambda: self._process_started(room_id))
         process.errorOccurred.connect(
             lambda error: self._process_error(room_id, error, process.errorString())
         )
         process.finished.connect(lambda exit_code, _status: self._finished(room_id, int(exit_code)))
         self.processes[room_id] = process
         self.session_dirs[room_id] = plan.session_dir
-        self.started_monotonic[room_id] = time.monotonic()
+        self.last_file_bytes[room_id] = 0
+        self.started_monotonic.pop(room_id, None)
+        self.last_growth_at.pop(room_id, None)
         self.last_disk_checks[room_id] = 0
         group_id = self.session_groups.setdefault(room_id, str(uuid4()))
         recovery_index = self.recovery_indices.get(room_id, 0)
@@ -289,18 +330,34 @@ class RecordingManager(QObject):
         )
         process.start()
 
+    def _process_started(self, room_id: str) -> None:
+        if room_id not in self.processes:
+            return
+        started = time.monotonic()
+        self.started_monotonic[room_id] = started
+        self.last_growth_at[room_id] = started
+        self.rooms.update_room_state(room_id, RoomStatus.RECORDING)
+
     @Slot()
     def _update_progress(self) -> None:
         for room_id, session_dir in tuple(self.session_dirs.items()):
-            started = self.started_monotonic.get(room_id, time.monotonic())
-            duration = max(0, int(time.monotonic() - started))
             file_bytes = (
                 sum(path.stat().st_size for path in session_dir.glob("*") if path.is_file())
                 if session_dir.exists()
                 else 0
             )
+            started = self.started_monotonic.get(room_id)
+            if started is None:
+                self.last_file_bytes[room_id] = file_bytes
+                self.rooms.update_recording_progress(room_id, 0, file_bytes)
+                continue
+            duration = max(0, int(time.monotonic() - started))
             self.rooms.update_recording_progress(room_id, duration, file_bytes)
             now = time.monotonic()
+            previous_file_bytes = self.last_file_bytes.get(room_id, file_bytes)
+            if file_bytes > previous_file_bytes:
+                self.last_growth_at[room_id] = now
+            self.last_file_bytes[room_id] = file_bytes
             if (
                 room_id not in self.protective_stop_errors
                 and now - self.last_disk_checks.get(room_id, 0) >= 30
@@ -322,8 +379,33 @@ class RecordingManager(QObject):
                     if process:
                         process.write(b"q\n")
                         QTimer.singleShot(
-                            8_000, lambda room=room_id: self._terminate_if_running(room)
+                            8_000,
+                            lambda room=room_id, expected=process: self._terminate_if_running(
+                                room, expected
+                            ),
                         )
+            process = self.processes.get(room_id)
+            if (
+                process is not None
+                and room_id not in self.protective_stop_errors
+                and room_id not in self.recovery_reasons
+                and should_mark_stalled(
+                    process_running=process.state() == QProcess.ProcessState.Running,
+                    file_bytes=file_bytes,
+                    last_file_bytes=previous_file_bytes,
+                    started_at=started,
+                    last_growth_at=self.last_growth_at.get(room_id, started),
+                    now=now,
+                    stall_timeout_seconds=self.stall_timeout_seconds,
+                    startup_grace_seconds=self.stall_grace_seconds,
+                )
+            ):
+                self._request_recovery_stop(
+                    room_id,
+                    Stalled(
+                        f"录制文件已超过 {self.stall_timeout_seconds:g} 秒未增长，已安全停止录制"
+                    ),
+                )
 
     @Slot(str)
     def stop_room(self, room_id: str) -> None:
@@ -338,7 +420,24 @@ class RecordingManager(QObject):
             self.pause_after_stops.add(room_id)
         process.setProperty("intentionalStop", True)
         process.write(b"q\n")
-        QTimer.singleShot(8_000, lambda: self._terminate_if_running(room_id))
+        QTimer.singleShot(
+            8_000,
+            lambda room=room_id, expected=process: self._terminate_if_running(room, expected),
+        )
+
+    def _request_recovery_stop(self, room_id: str, failure: RecordingFailure) -> None:
+        process = self.processes.get(room_id)
+        if process is None or process.state() != QProcess.ProcessState.Running:
+            return
+        self.recovery_reasons[room_id] = failure
+        process.setProperty("recoveryReason", failure.kind.value)
+        self.last_recording_failures[room_id] = failure
+        self.rooms.update_room_state(room_id, RoomStatus.STALLED, error=str(failure))
+        process.write(b"q\n")
+        QTimer.singleShot(
+            8_000,
+            lambda room=room_id, expected=process: self._terminate_if_running(room, expected),
+        )
 
     @Slot()
     def stop_all(self) -> None:
@@ -359,15 +458,28 @@ class RecordingManager(QObject):
         index = max(0, int(digits or "1") - 1)
         return stream_urls[min(index, len(stream_urls) - 1)]
 
-    def _terminate_if_running(self, room_id: str) -> None:
+    def _terminate_if_running(
+        self, room_id: str, expected_process: QProcess | None = None
+    ) -> None:
         process = self.processes.get(room_id)
-        if process and process.state() != QProcess.ProcessState.NotRunning:
+        if (
+            process
+            and (expected_process is None or process is expected_process)
+            and process.state() != QProcess.ProcessState.NotRunning
+        ):
             process.terminate()
-            QTimer.singleShot(3_000, lambda: self._kill_if_running(room_id))
+            QTimer.singleShot(
+                3_000,
+                lambda room=room_id, expected=process: self._kill_if_running(room, expected),
+            )
 
-    def _kill_if_running(self, room_id: str) -> None:
+    def _kill_if_running(self, room_id: str, expected_process: QProcess | None = None) -> None:
         process = self.processes.get(room_id)
-        if process and process.state() != QProcess.ProcessState.NotRunning:
+        if (
+            process
+            and (expected_process is None or process is expected_process)
+            and process.state() != QProcess.ProcessState.NotRunning
+        ):
             process.kill()
 
     def _process_error(
@@ -375,7 +487,7 @@ class RecordingManager(QObject):
     ) -> None:
         process = self.processes.get(room_id)
         intentional = bool(process and process.property("intentionalStop"))
-        if intentional or room_id in self.manual_stops:
+        if intentional or room_id in self.manual_stops or room_id in self.recovery_reasons:
             return
         failure = FFmpegFailed(message or f"FFmpeg 进程错误：{error}")
         self.last_recording_failures[room_id] = failure
@@ -392,6 +504,9 @@ class RecordingManager(QObject):
             process.deleteLater()
         session_dir = self.session_dirs.pop(room_id, Path())
         self.started_monotonic.pop(room_id, None)
+        self.last_file_bytes.pop(room_id, None)
+        self.last_growth_at.pop(room_id, None)
+        recovery_failure = self.recovery_reasons.pop(room_id, None)
         self.last_disk_checks.pop(room_id, None)
         total_bytes = (
             sum(path.stat().st_size for path in session_dir.glob("*") if path.is_file())
@@ -404,12 +519,16 @@ class RecordingManager(QObject):
         pause_monitoring = room_id in self.pause_after_stops
         self.pause_after_stops.discard(room_id)
         protective_error = self.protective_stop_errors.pop(room_id, "")
-        success = recording_succeeded(exit_code, manual_stop, protective_error)
+        recovery_failed = recovery_failure is not None and not manual_stop and not protective_error
+        success = recording_succeeded(exit_code, manual_stop, protective_error) and (
+            not recovery_failed
+        )
         failure = recording_failure_for_exit(
             exit_code,
             intentional_stop=manual_stop,
             protective_error=protective_error,
             message=f"FFmpeg 退出码 {exit_code}",
+            recovery_failure=recovery_failure,
         )
         if failure is not None:
             self.last_recording_failures[room_id] = failure

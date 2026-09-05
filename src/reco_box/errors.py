@@ -224,6 +224,7 @@ def recording_failure_for_exit(
     intentional_stop: bool = False,
     protective_error: str = "",
     message: str = "",
+    recovery_failure: RecordingFailure | None = None,
 ) -> RecordingFailure | None:
     """Classify an FFmpeg completion without changing the existing retry policy."""
 
@@ -231,6 +232,8 @@ def recording_failure_for_exit(
         return DiskFull(protective_error)
     if intentional_stop:
         return ManualStop(message or "手动停止录制")
+    if recovery_failure is not None:
+        return recovery_failure
     if exit_code == 0:
         return None
     return FFmpegFailed(message or f"FFmpeg 退出码 {exit_code}")

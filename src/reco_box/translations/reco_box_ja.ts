@@ -255,6 +255,11 @@
             <translation>録音中</translation>
         </message>
         <message>
+            <location filename="../ui/Main.qml" line="241" />
+            <source>卡顿收尾</source>
+            <translation>停止処理中</translation>
+        </message>
+        <message>
             <location filename="../ui/Main.qml" line="37" />
             <location filename="../ui/Main.qml" line="241" />
             <source>监控中</source>

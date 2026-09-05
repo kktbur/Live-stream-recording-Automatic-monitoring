@@ -102,3 +102,26 @@ for platform-by-platform certificate-compatibility evidence.
   independent review agents timed out without a final report; owner acceptance remains open.
 - Explicit non-goals: no change to PR-09 retry timing, no stall detection, RecordingSession,
   recovery state machine, offline hysteresis, crash recovery, or pressure/fault injection.
+
+## PR-11 current acceptance
+
+- Scope: `0.3.0-04` Stall Detection; the package version remains `0.2.1`.
+- The file-growth watchdog starts timing on the QProcess `started` signal, requires a Running FFmpeg
+  process, applies a 30-second startup guard, and triggers only when the 120-second no-growth threshold
+  is also reached; with zero output, the first trigger is about 120 seconds after process start.
+- Trigger handling records `Stalled`, changes the room to `STALLED`, writes `q`, and retains the
+  existing terminate/kill fallback and short retry path. Finalization callbacks are bound to the
+  original QProcess, and process errors during that finalization retain `STALLED`. It does not claim
+  a new recovery state machine.
+- `STALLED` is excluded from duplicate monitoring starts; UI status, filtering and conflicting-action
+  guards are covered. Persisted `STALLED` is normalized to `OFFLINE` on startup, and all nine
+  non-Chinese translation TS/QM catalogs are aligned.
+- Local evidence: 28 focused tests passed; the full suite has `179 total, 177 passed、2 failed、5 warnings`.
+  The two known failures require local `runtime/ffmpeg/ffmpeg.exe` and `ffprobe.exe` files.
+- `ruff check src tests`, compileall, and `git diff --check` passed. Draft PR [#15](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/15)
+  is open/draft and Windows CI [#43](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33935714737)
+  succeeded; its single job and diagnostic artifact are recorded remotely. The final independent
+  Standards/Spec review found no P0/P1/P2 issue, and owner acceptance remains pending.
+- Explicit non-goals: no `RecordingSession`, same-session recovery, recovery state machine, offline
+  hysteresis, crash recovery, or pressure/fault injection.
+

@@ -5,7 +5,7 @@
 - Status: ACTIVE
 - Current package version: `0.2.1` (single source: `pyproject.toml`).
 - Current maintenance roadmap target: `0.3.0`.
-- The latest maintenance record is [PR-10 Resolver and recording error taxonomy](maintenance/2026-09-05-pr-10-error-taxonomy.md).
+- The latest maintenance record is [PR-11 Recording stall detection](maintenance/2026-09-05-pr-11-stall-detection.md).
 
 ## Confirmed PR-06 boundary
 
@@ -96,3 +96,26 @@ from this durable product document.
   Windows CI [#41](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33929815223)
   passed all configured stages. Two later independent review agents timed out without a final report, so
   owner acceptance remains open. The next scope after acceptance is `0.3.0-04` Stall Detection.
+
+## Confirmed PR-11 boundary
+
+- `RecordingManager` starts its growth clock from the QProcess `started` signal and only marks a
+  still-running process stalled after both the 30-second startup guard and the 120-second no-growth
+  threshold; with zero output, the first trigger is therefore about 120 seconds after process start.
+- Automatic stall handling enters `RoomStatus.STALLED`, records `Stalled`, sends FFmpeg `q`,
+  then uses the existing 8-second terminate and 3-second kill fallbacks; it reuses the existing
+  short retry path and does not introduce `RecordingSession` or a recovery state machine.
+- Finalization timers are bound to the original QProcess, and process errors during automatic
+  finalization do not overwrite `STALLED` before the normal completion/retry path runs.
+- Monitoring does not start a second check while a room is `STALLED`; the UI shows “卡顿收尾” and
+  disables conflicting edit/delete/check actions while retaining an explicit stop action.
+- On application startup, a persisted `STALLED` marker is normalized to `OFFLINE` so an enabled room
+  can be monitored again; this guard does not claim full crash recovery.
+- Local PR-11 focused tests are `28 passed`; the full suite is `179 total, 177 passed、2 failed、5 warnings`,
+  with both failures caused by missing local FFmpeg/ffprobe runtime files.
+- Draft PR [#15](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/15) is open/draft,
+  with remote implementation head `94caa50f9e56fd8df484127bb0dc39e8e8f51299`; Windows CI [#43](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/actions/runs/33935714737)
+  succeeded. Its single job and diagnostic artifact are recorded remotely. The final independent
+  Standards/Spec review found no P0/P1/P2 issue; owner acceptance remains open.
+- The next strictly ordered scope after PR-11 is `0.3.0-05` RecordingSession.
+

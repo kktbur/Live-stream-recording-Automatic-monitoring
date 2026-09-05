@@ -13,6 +13,7 @@ class RoomStatus(StrEnum):
     OFFLINE = "offline"
     PREPARING = "preparing"
     RECORDING = "recording"
+    STALLED = "stalled"
     CONVERTING = "converting"
     RETRYING = "retrying"
     ERROR = "error"
