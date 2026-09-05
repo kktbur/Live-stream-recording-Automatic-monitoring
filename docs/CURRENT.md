@@ -191,6 +191,9 @@ from this durable product document.
   still-live room to reuse its session ID and directory. Manual stop requests
   are idempotent, conversion pause intent survives a late worker callback, and
   `QProcess.errorOccurred` enters `RECOVERING` before finalization.
+- Single-room and tray pause actions go through `RecordingManager`; a late
+  process-start signal during `PREPARING` is safely stopped, and re-enabled
+  rooms synchronize `DISABLED` before a resolver failure is recorded.
 - The existing `RoomStatus` values remain the UI/persistence projection for
   compatibility. `STALLED` is the visible safe-stop projection of the internal
   recovery path, and the new runtime states are not persisted as room status or
@@ -198,10 +201,10 @@ from this durable product document.
 - Invalid event/state pairs raise `InvalidRecoveryTransition` without mutating
   the machine. State-machine, monitor-wiring, recording-wiring, and existing
   retry/stall tests cover the boundary.
-- Local PR-14 focused tests are `43 passed`; the full suite is `210 collected,
-  208 passed、2 known prerequisite failures`; the two known failures require
-  local FFmpeg/ffprobe runtime files. Ruff, compileall, and `git diff --check`
-  passed.
+- Local PR-14 focused tests are `49 passed`; QML smoke tests are `2 passed`; the
+  full suite is `216 collected, 214 passed、2 known prerequisite failures`; the
+  two known failures require local FFmpeg/ffprobe runtime files. Ruff,
+  compileall, and `git diff --check` passed.
 - PR-14 remote publication, final independent review, and Windows CI remain the
   next acceptance gates. Offline hysteresis and startup crash recovery remain
   later roadmap tasks.

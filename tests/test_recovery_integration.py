@@ -187,6 +187,107 @@ def test_recording_manager_requires_offline_confirmation_after_clean_exit(
     assert room.id not in manager.recording_sessions
 
 
+def test_pause_during_offline_confirmation_abandons_active_session(
+    monkeypatch, tmp_path
+) -> None:
+    QCoreApplication.instance() or QCoreApplication([])
+    monkeypatch.setattr("reco_box.recording.QProcess", FakeProcess)
+    monkeypatch.setattr("reco_box.recording.has_minimum_free_space", lambda *_args: True)
+
+    database = Database(tmp_path / "reco_box.db")
+    room = Room(
+        url="https://live.bilibili.com/27",
+        platform=Platform.BILIBILI,
+        save_root=str(tmp_path),
+        convert_to_mp4=False,
+    )
+    database.upsert_room(room)
+    rooms = RoomListModel(database)
+    states = RecoveryStateStore()
+    manager = RecordingManager(
+        rooms,
+        database,
+        ffmpeg_path=tmp_path / "ffmpeg.exe",
+        recovery_states=states,
+    )
+    manager.progress_timer.stop()
+    manager.start_for_room(
+        room.id,
+        ResolvedStream(
+            Platform.BILIBILI,
+            True,
+            "主播",
+            "直播",
+            ("https://cdn.example.test/confirmation-pause",),
+        ),
+    )
+    manager._process_started(room.id)
+    session_id = manager.recording_sessions[room.id].session_id
+    manager._finished(room.id, 0)
+
+    assert states.state_for(room.id) is RecoveryState.CONFIRMING_OFFLINE
+    manager.stop_room(room.id)
+
+    abandoned = database.get_recording_session(session_id)
+    assert abandoned is not None
+    assert abandoned.state is RecordingSessionState.ABANDONED
+    assert states.state_for(room.id) is RecoveryState.DISABLED
+    assert rooms.get_room(room.id).enabled is False
+
+
+def test_pause_during_preparing_handles_a_late_process_started_signal(
+    monkeypatch, tmp_path
+) -> None:
+    QCoreApplication.instance() or QCoreApplication([])
+    monkeypatch.setattr("reco_box.recording.QProcess", FakeProcess)
+    monkeypatch.setattr("reco_box.recording.has_minimum_free_space", lambda *_args: True)
+
+    database = Database(tmp_path / "reco_box.db")
+    room = Room(
+        url="https://live.bilibili.com/28",
+        platform=Platform.BILIBILI,
+        save_root=str(tmp_path),
+        convert_to_mp4=False,
+    )
+    database.upsert_room(room)
+    rooms = RoomListModel(database)
+    states = RecoveryStateStore()
+    manager = RecordingManager(
+        rooms,
+        database,
+        ffmpeg_path=tmp_path / "ffmpeg.exe",
+        recovery_states=states,
+    )
+    manager.progress_timer.stop()
+    manager.start_for_room(
+        room.id,
+        ResolvedStream(
+            Platform.BILIBILI,
+            True,
+            "主播",
+            "直播",
+            ("https://cdn.example.test/preparing-pause",),
+        ),
+    )
+    process = manager.processes[room.id]
+    process._state = FakeProcess.ProcessState.NotRunning
+
+    manager.stop_room(room.id)
+    assert states.state_for(room.id) is RecoveryState.STOPPING
+    assert process.writes == []
+
+    process._state = FakeProcess.ProcessState.Running
+    manager._process_started(room.id)
+
+    assert states.state_for(room.id) is RecoveryState.STOPPING
+    assert process.property("intentionalStop") is True
+    assert process.writes == [b"q\n"]
+
+    manager._finished(room.id, 1)
+    assert states.state_for(room.id) is RecoveryState.DISABLED
+    assert rooms.get_room(room.id).enabled is False
+
+
 def test_manual_stop_is_idempotent_and_stall_watchdog_does_not_race(
     monkeypatch, tmp_path
 ) -> None:
@@ -247,8 +348,9 @@ def test_manual_stop_is_idempotent_and_stall_watchdog_does_not_race(
     "result",
     [ConversionResult(True, 12), ConversionResult(False, 12, "conversion failed")],
 )
+@pytest.mark.parametrize("use_stop_all", [False, True])
 def test_pause_during_conversion_wins_over_late_conversion_callback(
-    monkeypatch, tmp_path, result
+    monkeypatch, tmp_path, result, use_stop_all
 ) -> None:
     QCoreApplication.instance() or QCoreApplication([])
     monkeypatch.setattr("reco_box.recording.has_minimum_free_space", lambda *_args: True)
@@ -283,7 +385,10 @@ def test_pause_during_conversion_wins_over_late_conversion_callback(
     states.transition(room.id, RecoveryEvent.RECORDING_STARTED)
     states.transition(room.id, RecoveryEvent.CONVERSION_STARTED)
 
-    manager.stop_room(room.id)
+    if use_stop_all:
+        manager.stopAllAndPause()
+    else:
+        manager.stop_room(room.id)
     assert states.state_for(room.id) is RecoveryState.DISABLED
     assert room.id not in manager.recording_sessions
     assert rooms.get_room(room.id).enabled is False
@@ -300,6 +405,60 @@ def test_pause_during_conversion_wins_over_late_conversion_callback(
     assert states.state_for(room.id) is RecoveryState.DISABLED
     assert rooms.get_room(room.id).status is RoomStatus.DISABLED
     assert rooms.get_room(room.id).enabled is False
+
+
+def test_manual_pause_without_active_session_completes_state_boundary(
+    tmp_path,
+) -> None:
+    QCoreApplication.instance() or QCoreApplication([])
+
+    database = Database(tmp_path / "reco_box.db")
+    room = Room(
+        url="https://live.bilibili.com/26",
+        platform=Platform.BILIBILI,
+    )
+    database.upsert_room(room)
+    rooms = RoomListModel(database)
+    states = RecoveryStateStore()
+    states.transition(room.id, RecoveryEvent.CHECK_REQUESTED)
+    states.transition(room.id, RecoveryEvent.RESOLVER_FAILED)
+    rooms.update_room_state(room.id, RoomStatus.RETRYING, error="等待恢复")
+    manager = RecordingManager(rooms, database, recovery_states=states)
+    manager.progress_timer.stop()
+    manager.retry_counts[room.id] = 1
+
+    manager.stop_room(room.id)
+
+    assert states.state_for(room.id) is RecoveryState.DISABLED
+    assert room.id not in manager.retry_counts
+    assert rooms.get_room(room.id).enabled is False
+    assert rooms.get_room(room.id).status is RoomStatus.DISABLED
+
+
+def test_resolver_failure_after_reenable_syncs_disabled_state(tmp_path) -> None:
+    database = Database(tmp_path / "reco_box.db")
+    room = Room(
+        url="https://live.bilibili.com/29",
+        platform=Platform.BILIBILI,
+    )
+    database.upsert_room(room)
+    rooms = RoomListModel(database)
+    states = RecoveryStateStore()
+    states.transition(room.id, RecoveryEvent.CHECK_REQUESTED)
+    states.transition(room.id, RecoveryEvent.ROOM_DISABLED)
+    rooms.set_room_enabled(room.id, True)
+    coordinator = MonitoringCoordinator(
+        rooms,
+        object(),
+        scheduler=MonitoringScheduler(random_source=lambda low, high: low),
+        resolver_pool=FakeResolverPool(),
+        recovery_states=states,
+    )
+
+    coordinator._failed(room.id, "temporary resolver failure")
+
+    assert states.state_for(room.id) is RecoveryState.RECOVERING
+    assert rooms.get_room(room.id).status is RoomStatus.RETRYING
 
 
 def test_qprocess_error_enters_recovery_and_monitor_waits_for_finalization(

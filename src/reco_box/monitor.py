@@ -231,6 +231,8 @@ class MonitoringCoordinator(QObject):
                 machine.transition(RecoveryEvent.ROOM_DISABLED)
             self.rooms.update_room_state(room_id, RoomStatus.DISABLED)
             return
+        if self.recovery_states.state_for(room_id) is RecoveryState.DISABLED:
+            self.recovery_states.transition(room_id, RecoveryEvent.ROOM_ENABLED)
         self.recovery_states.transition(room_id, RecoveryEvent.RESOLVER_FAILED)
         self.scheduler.schedule_retry(
             self.next_check, room_id, room.check_interval_seconds, attempt=attempt

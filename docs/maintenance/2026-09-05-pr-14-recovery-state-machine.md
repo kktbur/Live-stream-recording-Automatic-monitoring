@@ -34,6 +34,10 @@ alone must not be treated as proof that the public livestream ended.
   projection. `QProcess.errorOccurred` enters `RECOVERING`, while the monitor
   waits for finalization before scheduling another resolver check.
 - `stopAllAndPause` now includes rooms whose recordings are already converting.
+- Single-room pause actions and the system-tray pause-all action use the same
+  recording-manager lifecycle. A pause during `PREPARING` safely handles a late
+  process-start signal, and a resolver failure after re-enabling a room first
+  synchronizes `DISABLED` back to `OFFLINE`.
 - Existing `RoomStatus` values remain the user-facing and persisted projection;
   no runtime state snapshot or schema migration is added.
 - Disabled rooms cannot be started by a late resolver/live callback.
@@ -49,8 +53,8 @@ alone must not be treated as proof that the public livestream ended.
 ## Local verification
 
 - Focused state-machine, monitor-wiring, recording-wiring, session, stall, and
-  retry tests: `43 passed`.
-- Full suite: `210 collected, 208 passed, 2 known prerequisite failures`; both
+  retry tests: `49 passed`; QML smoke tests: `2 passed`.
+- Full suite: `216 collected, 214 passed, 2 known prerequisite failures`; both
   failures require the local `runtime/ffmpeg/ffmpeg.exe` and `ffprobe.exe`
   assets.
 - Ruff, compileall, and `git diff --check` passed.

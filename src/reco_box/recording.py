@@ -447,7 +447,25 @@ class RecordingManager(QObject):
         self._finish_session(room_id, RecordingSessionState.COMPLETED, "offline")
 
     def _process_started(self, room_id: str) -> None:
-        if room_id not in self.processes:
+        process = self.processes.get(room_id)
+        if process is None:
+            return
+        room = self.rooms.get_room(room_id)
+        state = self.recovery_states.state_for(room_id)
+        if (
+            room is None
+            or not room.enabled
+            or room_id in self.manual_stops
+            or state is RecoveryState.STOPPING
+        ):
+            if room is not None and not room.enabled and room_id not in self.manual_stops:
+                self.manual_stops.add(room_id)
+                self.pause_after_stops.add(room_id)
+                self._complete_pause_transition(room_id)
+            process.setProperty("intentionalStop", True)
+            if process.property("stopCommandSent") is not True:
+                process.write(b"q\n")
+                process.setProperty("stopCommandSent", True)
             return
         self.recovery_states.transition(room_id, RecoveryEvent.RECORDING_STARTED)
         started = time.monotonic()
@@ -532,12 +550,18 @@ class RecordingManager(QObject):
     def _abandon_pending_session(self, room_id: str) -> None:
         if room_id not in self.recording_sessions:
             return
-        self.recovery_states.transition(room_id, RecoveryEvent.MANUAL_STOP_REQUESTED)
-        self.recovery_states.transition(room_id, RecoveryEvent.PAUSE_COMPLETED)
+        self._complete_pause_transition(room_id)
         self.retry_counts.pop(room_id, None)
         self._finish_session(room_id, RecordingSessionState.ABANDONED, "manual_stop")
         self.rooms.update_recording_progress(room_id, 0, 0)
         self.recordingCompleted.emit()
+
+    def _complete_pause_transition(self, room_id: str) -> None:
+        machine = self.recovery_states.machine_for(room_id)
+        if machine.can_transition(RecoveryEvent.MANUAL_STOP_REQUESTED):
+            machine.transition(RecoveryEvent.MANUAL_STOP_REQUESTED)
+        if machine.can_transition(RecoveryEvent.PAUSE_COMPLETED):
+            machine.transition(RecoveryEvent.PAUSE_COMPLETED)
 
     def _request_stop(self, room_id: str, pause_monitoring: bool) -> None:
         process = self.processes.get(room_id)
@@ -545,7 +569,11 @@ class RecordingManager(QObject):
             if pause_monitoring:
                 if room_id in self.converting_rooms:
                     self.pause_after_conversions.add(room_id)
-                self._abandon_pending_session(room_id)
+                if room_id in self.recording_sessions:
+                    self._abandon_pending_session(room_id)
+                else:
+                    self._complete_pause_transition(room_id)
+                    self.retry_counts.pop(room_id, None)
                 self.rooms.set_room_enabled(room_id, False)
             return
         state = self.recovery_states.state_for(room_id)
@@ -562,7 +590,9 @@ class RecordingManager(QObject):
         if pause_monitoring:
             self.pause_after_stops.add(room_id)
         process.setProperty("intentionalStop", True)
-        process.write(b"q\n")
+        if process.state() == QProcess.ProcessState.Running:
+            process.write(b"q\n")
+            process.setProperty("stopCommandSent", True)
         QTimer.singleShot(
             8_000,
             lambda room=room_id, expected=process: self._terminate_if_running(room, expected),
@@ -748,16 +778,24 @@ class RecordingManager(QObject):
                 if not manual_stop:
                     self.recovery_states.transition(room_id, RecoveryEvent.RECORDING_FINISHED)
                 else:
-                    if self.recovery_states.state_for(room_id) is not RecoveryState.STOPPING:
+                    current_state = self.recovery_states.state_for(room_id)
+                    if current_state not in {
+                        RecoveryState.STOPPING,
+                        RecoveryState.DISABLED,
+                    } and self.recovery_states.machine_for(room_id).can_transition(
+                        RecoveryEvent.MANUAL_STOP_REQUESTED
+                    ):
                         self.recovery_states.transition(
                             room_id, RecoveryEvent.MANUAL_STOP_REQUESTED
                         )
-                    self.recovery_states.transition(
-                        room_id,
-                        RecoveryEvent.PAUSE_COMPLETED
-                        if pause_monitoring
-                        else RecoveryEvent.STOP_COMPLETED,
-                    )
+                    current_state = self.recovery_states.state_for(room_id)
+                    if current_state is not RecoveryState.DISABLED:
+                        self.recovery_states.transition(
+                            room_id,
+                            RecoveryEvent.PAUSE_COMPLETED
+                            if pause_monitoring
+                            else RecoveryEvent.STOP_COMPLETED,
+                        )
             self.retry_counts.pop(room_id, None)
             if manual_stop:
                 self._finish_session(room_id, RecordingSessionState.ABANDONED, "manual_stop")

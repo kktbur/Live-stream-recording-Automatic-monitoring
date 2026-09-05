@@ -45,7 +45,7 @@ class TrayController(QObject):
         menu.addAction(self._text("显示 Reco Box"), self.show_window)
         menu.addSeparator()
         menu.addAction(self._text("继续全部监控"), lambda: self.rooms.setAllEnabled(True))
-        menu.addAction(self._text("暂停全部监控"), lambda: self.rooms.setAllEnabled(False))
+        menu.addAction(self._text("暂停全部监控"), self.recorder.stopAllAndPause)
         menu.addAction(self._text("打开录制目录"), self.open_recording_dir)
         menu.addSeparator()
         menu.addAction(self._text("退出"), self.exit_application)
@@ -80,3 +80,4 @@ class TrayController(QObject):
             self.app.quit()
             return
         QTimer.singleShot(250, self._wait_for_recorders)
+

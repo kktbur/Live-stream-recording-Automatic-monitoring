@@ -22,6 +22,9 @@ establishes the platform network matrix; PR-07 and PR-08 migrate Bilibili and
 YouTube request boundaries to verified-by-default first-party adapters. Issue #1
 remains open because other upstream paths and public-sample evidence are pending.
 
-The active reliability work begins with the 0.3.0 Resolver scheduler: bounded
-concurrency, platform cooldown, jitter, and retry timing are being separated from
-recording and conversion workers before the later recovery-state-machine work.
+The active 0.3.0 reliability work includes the Resolver scheduler's bounded
+concurrency, platform cooldown, jitter, and retry timing, followed by durable
+RecordingSession ownership, same-session recovery, and the explicit recovery
+state machine. Offline hysteresis and startup crash repair remain the next
+reliability boundaries.
+

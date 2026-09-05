@@ -210,8 +210,8 @@ for platform-by-platform certificate-compatibility evidence.
   stream ending. Existing `RoomStatus` values remain the UI/persistence
   projection for compatibility.
 - Local evidence: PR-14 state-machine, wiring, session, stall, and retry tests
-  are `43 passed`; the full suite is `210 collected, 208 passed、2 known
-  prerequisite failures`; the two known failures require local
+  are `49 passed`, with QML smoke tests `2 passed`; the full suite is `216
+  collected, 214 passed、2 known prerequisite failures`; the two known failures require local
   `runtime/ffmpeg/ffmpeg.exe` and `ffprobe.exe` assets. Ruff, compileall, and
   `git diff --check` passed.
 - Explicit non-goals: no offline hysteresis, startup crash recovery, persisted
