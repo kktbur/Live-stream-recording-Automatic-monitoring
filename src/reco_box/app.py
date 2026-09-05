@@ -16,6 +16,7 @@ from .monitor import MonitoringCoordinator
 from .preview import PreviewController
 from .rate_limit import ResolverRateLimitConfig
 from .recording import RecordingManager
+from .recovery import RecoveryStateStore
 from .resolver import DouyinLiveRecorderResolver
 from .resources import application_resource, configure_bundled_runtime, package_resource
 from .room_model import RoomFilterProxyModel, RoomListModel
@@ -70,11 +71,13 @@ def main() -> int:
     settings = SettingsController(database)
     desktop_actions = DesktopActions()
     legacy_import = LegacyImportController(database, rooms, settings)
-    recorder = RecordingManager(rooms, database)
+    recovery_states = RecoveryStateStore()
+    recorder = RecordingManager(rooms, database, recovery_states=recovery_states)
     monitor = MonitoringCoordinator(
         rooms,
         DouyinLiveRecorderResolver(),
         rate_limit_config=_resolver_rate_limit_config(settings),
+        recovery_states=recovery_states,
     )
     _connect_resolver_rate_limit_settings(settings, monitor)
     preview = PreviewController(monitor)
@@ -137,3 +140,4 @@ def _connect_resolver_rate_limit_settings(
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

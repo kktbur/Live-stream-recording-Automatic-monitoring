@@ -5,7 +5,7 @@
 - Status: ACTIVE
 - Current package version: `0.2.1` (single source: `pyproject.toml`).
 - Current maintenance roadmap target: `0.3.0`.
-- The latest maintenance record is [PR-13 Same-session recovery](maintenance/2026-09-05-pr-13-same-session-recovery.md).
+- The latest maintenance record is [PR-14 Recovery State Machine](maintenance/2026-09-05-pr-14-recovery-state-machine.md).
 
 ## Confirmed PR-06 boundary
 
@@ -161,8 +161,8 @@ from this durable product document.
 - A manual pause while recovery is pending abandons the active session, and a
   recovery disk preflight failure marks it `failed` before a new attempt starts.
 - Only a non-live resolver result without a resolver failure closes a recoverable
-  active session before a later broadcast can create a new one; PR-14 will add
-  continuous offline confirmation before this boundary is applied.
+  active session before a later broadcast can create a new one; PR-14 now adds a
+  runtime clean-end confirmation boundary before this closure is applied.
 - Fixed point `68a81f3` passed the final independent Standards and Spec reviews;
   Draft PR [#17](https://github.com/kktbur/Live-stream-recording-Automatic-monitoring/pull/17)
   is open/draft at remote head `c9735602ad7203394d343be67eb538fafcf5a2df`.
@@ -171,5 +171,38 @@ from this durable product document.
   `RecoBox-installer-e2e-diagnostics-33942125612` is retained until 2026-09-12.
 - Owner acceptance remains pending; the PR stays unmerged and no tag, formal
   Release, or `main` modification was made.
-- Startup recovery, explicit recovery-state transitions, and offline hysteresis
-  remain later roadmap tasks.
+- Startup recovery and offline hysteresis remain later roadmap tasks.
+
+## Confirmed PR-14 boundary
+
+- `src/reco_box/recovery.py` defines a strict runtime state machine for each room:
+  `IDLE`, `CHECKING`, `PREPARING`, `RECORDING`, `RECOVERING`,
+  `CONFIRMING_OFFLINE`, `CONVERTING`, `OFFLINE`, `ERROR`, `STOPPING`, and
+  `DISABLED`.
+- The monitor and recorder share one `RecoveryStateStore`; resolver checks,
+  live detection, recording start/finish/failure, conversion, offline
+  confirmation, manual stop, and protective failure enter the machine as named
+  events rather than assigning lifecycle meaning only through scattered status writes.
+- A clean FFmpeg exit enters `CONFIRMING_OFFLINE`; only a later error-free
+  offline resolver result enters `OFFLINE`. A failed attempt enters
+  `RECOVERING`, and retry exhaustion enters `ERROR`; FFmpeg exit is not treated
+  as proof that the public livestream ended.
+- A clean exit retains the ACTIVE logical session until confirmation, allowing a
+  still-live room to reuse its session ID and directory. Manual stop requests
+  are idempotent, conversion pause intent survives a late worker callback, and
+  `QProcess.errorOccurred` enters `RECOVERING` before finalization.
+- The existing `RoomStatus` values remain the UI/persistence projection for
+  compatibility. `STALLED` is the visible safe-stop projection of the internal
+  recovery path, and the new runtime states are not persisted as room status or
+  claimed as startup crash recovery.
+- Invalid event/state pairs raise `InvalidRecoveryTransition` without mutating
+  the machine. State-machine, monitor-wiring, recording-wiring, and existing
+  retry/stall tests cover the boundary.
+- Local PR-14 focused tests are `43 passed`; the full suite is `210 collected,
+  208 passed、2 known prerequisite failures`; the two known failures require
+  local FFmpeg/ffprobe runtime files. Ruff, compileall, and `git diff --check`
+  passed.
+- PR-14 remote publication, final independent review, and Windows CI remain the
+  next acceptance gates. Offline hysteresis and startup crash recovery remain
+  later roadmap tasks.
+

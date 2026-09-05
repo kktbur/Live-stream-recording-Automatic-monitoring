@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, QRunnable, QThreadPool, QTimer, Signal, Slot
 from .domain import RoomStatus
 from .errors import ResolverError, UnknownResolverFailure, classify_resolver_error
 from .rate_limit import ResolverRateLimitConfig, ResolverRateLimiter
+from .recovery import RecoveryEvent, RecoveryState, RecoveryStateStore
 from .resolver import DouyinLiveRecorderResolver, ResolvedStream
 from .room_model import RoomListModel
 from .scheduler import MonitoringScheduler
@@ -56,12 +57,14 @@ class MonitoringCoordinator(QObject):
         scheduler: MonitoringScheduler | None = None,
         rate_limit_config: ResolverRateLimitConfig | None = None,
         resolver_pool: QThreadPool | None = None,
+        recovery_states: RecoveryStateStore | None = None,
     ):
         super().__init__()
         self.rooms = rooms
         self.resolver = resolver
         self.scheduler = scheduler or MonitoringScheduler()
         self.rate_limiter = ResolverRateLimiter(rate_limit_config)
+        self.recovery_states = recovery_states or RecoveryStateStore()
         self.resolver_pool = (
             resolver_pool if resolver_pool is not None else QThreadPool(self)
         )
@@ -114,7 +117,28 @@ class MonitoringCoordinator(QObject):
     def _tick(self) -> None:
         now = time.monotonic()
         for room in tuple(self.rooms.rooms):
-            if not room.enabled or room.id in self.running:
+            if not room.enabled:
+                machine = self.recovery_states.machine_for(room.id)
+                if machine.can_transition(RecoveryEvent.ROOM_DISABLED):
+                    machine.transition(RecoveryEvent.ROOM_DISABLED)
+                continue
+            if self.recovery_states.state_for(room.id) is RecoveryState.DISABLED:
+                self.recovery_states.transition(room.id, RecoveryEvent.ROOM_ENABLED)
+            if room.id in self.running:
+                continue
+            runtime_state = self.recovery_states.state_for(room.id)
+            if runtime_state in {
+                RecoveryState.CHECKING,
+                RecoveryState.PREPARING,
+                RecoveryState.RECORDING,
+                RecoveryState.CONVERTING,
+                RecoveryState.STOPPING,
+            }:
+                continue
+            if runtime_state is RecoveryState.RECOVERING and room.status in {
+                RoomStatus.ERROR,
+                RoomStatus.STALLED,
+            }:
                 continue
             if room.status in (
                 RoomStatus.RECORDING,
@@ -127,6 +151,7 @@ class MonitoringCoordinator(QObject):
                 continue
             if not self.rate_limiter.try_acquire(room.id, room.platform, now=now):
                 continue
+            self.recovery_states.transition(room.id, RecoveryEvent.CHECK_REQUESTED)
             self.running.add(room.id)
             self.rooms.update_room_state(room.id, RoomStatus.CHECKING)
             worker = ResolverWorker(room.id, room.url, room.proxy, room.quality, self.resolver)
@@ -149,10 +174,20 @@ class MonitoringCoordinator(QObject):
         room = self.rooms.get_room(room_id)
         if room is None:
             return
+        if not room.enabled:
+            machine = self.recovery_states.machine_for(room_id)
+            if machine.can_transition(RecoveryEvent.ROOM_DISABLED):
+                machine.transition(RecoveryEvent.ROOM_DISABLED)
+            self.last_streams.pop(room_id, None)
+            self.rooms.update_room_state(room_id, RoomStatus.DISABLED)
+            return
+        if self.recovery_states.state_for(room_id) is RecoveryState.DISABLED:
+            self.recovery_states.transition(room_id, RecoveryEvent.ROOM_ENABLED)
         self.scheduler.schedule_success(
             self.next_check, room_id, room.check_interval_seconds
         )
         if result.is_live and result.stream_urls:
+            self.recovery_states.transition(room_id, RecoveryEvent.LIVE_DETECTED)
             self.last_streams[room_id] = result
             self.rooms.update_room_state(
                 room_id,
@@ -162,6 +197,12 @@ class MonitoringCoordinator(QObject):
             )
             self.liveDetected.emit(room_id, result)
         else:
+            self.recovery_states.transition(
+                room_id,
+                RecoveryEvent.STREAM_OFFLINE
+                if result.failure is None
+                else RecoveryEvent.RESOLVER_FAILED,
+            )
             self.last_streams.pop(room_id, None)
             self.rooms.update_room_state(
                 room_id,
@@ -184,7 +225,15 @@ class MonitoringCoordinator(QObject):
         room = self.rooms.get_room(room_id)
         if room is None:
             return
+        if not room.enabled:
+            machine = self.recovery_states.machine_for(room_id)
+            if machine.can_transition(RecoveryEvent.ROOM_DISABLED):
+                machine.transition(RecoveryEvent.ROOM_DISABLED)
+            self.rooms.update_room_state(room_id, RoomStatus.DISABLED)
+            return
+        self.recovery_states.transition(room_id, RecoveryEvent.RESOLVER_FAILED)
         self.scheduler.schedule_retry(
             self.next_check, room_id, room.check_interval_seconds, attempt=attempt
         )
         self.rooms.update_room_state(room_id, RoomStatus.RETRYING, error=str(failure))
+

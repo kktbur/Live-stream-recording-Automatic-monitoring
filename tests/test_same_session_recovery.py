@@ -137,6 +137,7 @@ def test_failed_attempt_reuses_session_directory_and_next_file_number(
     ]
 
     manager._finished(room.id, 0)
+    manager.handle_stream_offline(room.id)
 
     completed = database.get_recording_session(first_session.session_id)
     assert completed is not None
@@ -524,3 +525,4 @@ def test_conversion_worker_forwards_intentional_stop(monkeypatch, tmp_path) -> N
     assert len(emitted) == 1
     assert emitted[0][:5] == ("room", "recording", tmp_path, False, result)
     assert emitted[0][5] is True
+
