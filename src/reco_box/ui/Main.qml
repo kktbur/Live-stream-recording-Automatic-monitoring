@@ -256,10 +256,10 @@ ApplicationWindow {
                         RowLayout {
                             Layout.fillWidth: true; spacing: 6
                             AppButton {
-                                text: roomStatus === "recording" || roomStatus === "stalled" ? qsTr("停止并暂停") : roomEnabled ? qsTr("暂停监控") : qsTr("开始监控")
-                                tone: roomStatus === "recording" || roomStatus === "stalled" ? "danger" : roomEnabled ? "secondary" : "positive"
+                                text: roomStatus === "recording" || roomStatus === "stalled" || roomStatus === "retrying" ? qsTr("停止并暂停") : roomEnabled ? qsTr("暂停监控") : qsTr("开始监控")
+                                tone: roomStatus === "recording" || roomStatus === "stalled" || roomStatus === "retrying" ? "danger" : roomEnabled ? "secondary" : "positive"
                                 Layout.fillWidth: true
-                                onClicked: { if (roomStatus === "recording" || roomStatus === "stalled") recordingManager.stop_room(roomId); else { roomModel.toggleRoom(roomId); if (!roomEnabled) monitorCoordinator.checkNow(roomId) } }
+                                onClicked: { if (roomStatus === "recording" || roomStatus === "stalled" || roomStatus === "retrying") recordingManager.stop_room(roomId); else { roomModel.toggleRoom(roomId); if (!roomEnabled) monitorCoordinator.checkNow(roomId) } }
                             }
                             AppButton { text: qsTr("检查并录制"); tone: "primary"; Layout.fillWidth: true; enabled: roomEnabled && roomStatus !== "recording" && roomStatus !== "stalled" && roomStatus !== "converting" && roomStatus !== "preparing"; onClicked: monitorCoordinator.checkNow(roomId) }
                         }

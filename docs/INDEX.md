@@ -25,6 +25,7 @@ cross-check evidence.
 | [PR-10 maintenance record](maintenance/2026-09-05-pr-10-error-taxonomy.md) | Resolver and recording error taxonomy | ACTIVE | Review PR-10 changes |
 | [PR-11 maintenance record](maintenance/2026-09-05-pr-11-stall-detection.md) | Recording stall detection and safe finalization | ACTIVE | Review PR-11 changes |
 | [PR-12 maintenance record](maintenance/2026-09-05-pr-12-recording-session.md) | RecordingSession model and persistence seam | ACTIVE | Review PR-12 changes |
+| [PR-13 maintenance record](maintenance/2026-09-05-pr-13-same-session-recovery.md) | Same-session recovery and collision-free attempt outputs | ACTIVE | Review PR-13 changes |
 | [Platform Network Security Matrix](platform-network-security.md) | Endpoint inventory, TLS status, and anonymous-access boundaries | ACTIVE | Plan platform-by-platform TLS migration |
 | [ADR-20260904-tls-network-policy](decisions/ADR-20260904-tls-network-policy.md) | Exact-host TLS exception policy | ACTIVE | Change first-party network requests |
 | [ADR-20260905-bilibili-tls-policy](decisions/ADR-20260905-bilibili-tls-policy.md) | Bilibili first-party request boundary | ACTIVE | Change Bilibili network requests |
@@ -33,5 +34,5 @@ cross-check evidence.
 | [ADR-20260905-error-taxonomy](decisions/ADR-20260905-error-taxonomy.md) | Resolver and recording failure classification boundary | ACTIVE | Change error handling or recovery hints |
 | [ADR-20260905-stall-detection](decisions/ADR-20260905-stall-detection.md) | Recording growth watchdog and safe finalization boundary | ACTIVE | Change stall detection or recording stop behavior |
 | [ADR-20260905-recording-session](decisions/ADR-20260905-recording-session.md) | Logical broadcast identity and stable session directory | ACTIVE | Change session persistence or recovery integration |
+| [ADR-20260905-same-session-recovery](decisions/ADR-20260905-same-session-recovery.md) | Reuse one session directory across bounded recording recovery | ACTIVE | Change recovery ownership or attempt output naming |
 | [0.2.1 release notes](../RELEASE_NOTES_0.2.1.md) | Version 0.2.1 maintenance and release boundary | ACTIVE | Review the candidate release scope |
-
