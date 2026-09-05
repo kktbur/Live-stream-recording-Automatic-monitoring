@@ -52,7 +52,17 @@ class RoomListModel(QAbstractListModel):
         super().__init__()
         self.database = database
         self.rooms = database.list_rooms()
+        self._normalize_stalled_rooms()
         self.runtime: dict[str, dict[str, int]] = {}
+
+    def _normalize_stalled_rooms(self) -> None:
+        """Clear persisted transient stall markers after an application restart."""
+
+        for room in self.rooms:
+            if room.status != RoomStatus.STALLED:
+                continue
+            room.status = RoomStatus.OFFLINE
+            self.database.upsert_room(room)
 
     def roleNames(self) -> dict[int, bytes]:
         return {
@@ -195,6 +205,7 @@ class RoomListModel(QAbstractListModel):
         busy = {
             RoomStatus.PREPARING,
             RoomStatus.RECORDING,
+            RoomStatus.STALLED,
             RoomStatus.CONVERTING,
         }
         if any(room.status in busy for room in self.rooms):
@@ -219,6 +230,7 @@ class RoomListModel(QAbstractListModel):
                 if room.status not in {
                     RoomStatus.PREPARING,
                     RoomStatus.RECORDING,
+                    RoomStatus.STALLED,
                     RoomStatus.CONVERTING,
                 }:
                     room.status = RoomStatus.OFFLINE if enabled else RoomStatus.DISABLED
@@ -353,7 +365,11 @@ class RoomListModel(QAbstractListModel):
                 room.title = title
             self.database.upsert_room(room)
             if status != previous_status:
-                level = "error" if status in (RoomStatus.ERROR, RoomStatus.RETRYING) else "info"
+                level = (
+                    "error"
+                    if status in (RoomStatus.ERROR, RoomStatus.RETRYING, RoomStatus.STALLED)
+                    else "info"
+                )
                 message = safe_error or f"状态变更：{previous_status.value} → {status.value}"
                 self.database.add_event(room.id, level, message)
             index = self.index(row, 0)
@@ -432,10 +448,10 @@ class RoomFilterProxyModel(QSortFilterProxyModel):
         index = source.index(source_row, 0, source_parent)
         status = str(source.data(index, RoomListModel.StatusRole) or "")
         enabled = bool(source.data(index, RoomListModel.EnabledRole))
-        if self._status_filter == "recording" and status not in {"recording", "converting"}:
+        if self._status_filter == "recording" and status not in {"recording", "stalled", "converting"}:
             return False
         if self._status_filter == "monitoring" and (
-            not enabled or status in {"recording", "converting", "disabled"}
+            not enabled or status in {"recording", "stalled", "converting", "disabled"}
         ):
             return False
         if self._status_filter == "not_started" and enabled:

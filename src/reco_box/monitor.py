@@ -115,7 +115,12 @@ class MonitoringCoordinator(QObject):
         for room in tuple(self.rooms.rooms):
             if not room.enabled or room.id in self.running:
                 continue
-            if room.status in (RoomStatus.RECORDING, RoomStatus.CONVERTING, RoomStatus.PREPARING):
+            if room.status in (
+                RoomStatus.RECORDING,
+                RoomStatus.STALLED,
+                RoomStatus.CONVERTING,
+                RoomStatus.PREPARING,
+            ):
                 continue
             if not self.scheduler.is_due(self.next_check, room.id, now):
                 continue

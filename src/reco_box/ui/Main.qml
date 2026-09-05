@@ -224,7 +224,7 @@ ApplicationWindow {
                 width: roomGrid.cellWidth; height: roomGrid.cellHeight
                 Rectangle {
                     anchors.fill: parent; anchors.rightMargin: 14; anchors.bottomMargin: 14
-                    radius: 16; color: window.surface; border.width: roomStatus === "recording" ? 2 : 1; border.color: roomStatus === "recording" ? window.success : window.lineColor
+                    radius: 16; color: window.surface; border.width: roomStatus === "recording" || roomStatus === "stalled" ? 2 : 1; border.color: roomStatus === "recording" ? window.success : roomStatus === "stalled" ? window.warning : window.lineColor
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 16; spacing: 7
                         RowLayout {
@@ -237,8 +237,8 @@ ApplicationWindow {
                             }
                             Rectangle {
                                 implicitWidth: statusLabel.implicitWidth + 18; implicitHeight: 28; radius: 14
-                                color: roomStatus === "recording" ? window.successSoft : roomEnabled ? window.surfaceStrong : window.dangerSoft
-                                Label { id: statusLabel; anchors.centerIn: parent; text: roomStatus === "recording" ? qsTr("录制中") : roomStatus === "converting" ? qsTr("转 MP4") : roomStatus === "checking" || roomStatus === "preparing" ? qsTr("检查中") : roomEnabled ? qsTr("监控中") : qsTr("未开始"); color: roomStatus === "recording" ? window.success : roomEnabled ? window.muted : window.danger; font.pixelSize: 11; font.weight: Font.DemiBold }
+                                color: roomStatus === "recording" ? window.successSoft : roomStatus === "stalled" ? window.warningSoft : roomEnabled ? window.surfaceStrong : window.dangerSoft
+                                Label { id: statusLabel; anchors.centerIn: parent; text: roomStatus === "recording" ? qsTr("录制中") : roomStatus === "stalled" ? qsTr("卡顿收尾") : roomStatus === "converting" ? qsTr("转 MP4") : roomStatus === "checking" || roomStatus === "preparing" ? qsTr("检查中") : roomEnabled ? qsTr("监控中") : qsTr("未开始"); color: roomStatus === "recording" ? window.success : roomStatus === "stalled" ? window.warning : roomEnabled ? window.muted : window.danger; font.pixelSize: 11; font.weight: Font.DemiBold }
                             }
                         }
                         Label { text: roomTitle.length > 0 ? roomTitle : qsTr("暂无直播间标题"); color: window.muted; font.pixelSize: 12; elide: Text.ElideRight; Layout.fillWidth: true }
@@ -247,7 +247,7 @@ ApplicationWindow {
                             Layout.fillWidth: true; Layout.preferredHeight: 50; radius: 10; color: window.surfaceSubtle; border.width: 1; border.color: "#ECEEF1"
                             RowLayout {
                                 anchors.fill: parent; anchors.margins: 10
-                                ColumnLayout { Layout.fillWidth: true; spacing: 1; Label { text: qualityName + " · " + outputFormat.toUpperCase() + " · " + recordingLine; color: window.ink; font.pixelSize: 11; font.weight: Font.DemiBold } Label { text: roomStatus === "recording" ? window.durationText(durationSeconds) : qsTr("检测间隔 ") + checkIntervalSeconds + qsTr(" 秒"); color: window.muted; font.pixelSize: 11; font.family: roomStatus === "recording" ? "Consolas" : "" } }
+                                ColumnLayout { Layout.fillWidth: true; spacing: 1; Label { text: qualityName + " · " + outputFormat.toUpperCase() + " · " + recordingLine; color: window.ink; font.pixelSize: 11; font.weight: Font.DemiBold } Label { text: roomStatus === "recording" || roomStatus === "stalled" ? window.durationText(durationSeconds) : qsTr("检测间隔 ") + checkIntervalSeconds + qsTr(" 秒"); color: window.muted; font.pixelSize: 11; font.family: roomStatus === "recording" || roomStatus === "stalled" ? "Consolas" : "" } }
                                 Label { objectName: "roomFileSize"; text: window.bytesText(fileBytes); color: window.muted; font.pixelSize: 10 }
                             }
                         }
@@ -256,19 +256,19 @@ ApplicationWindow {
                         RowLayout {
                             Layout.fillWidth: true; spacing: 6
                             AppButton {
-                                text: roomStatus === "recording" ? qsTr("停止并暂停") : roomEnabled ? qsTr("暂停监控") : qsTr("开始监控")
-                                tone: roomStatus === "recording" ? "danger" : roomEnabled ? "secondary" : "positive"
+                                text: roomStatus === "recording" || roomStatus === "stalled" ? qsTr("停止并暂停") : roomEnabled ? qsTr("暂停监控") : qsTr("开始监控")
+                                tone: roomStatus === "recording" || roomStatus === "stalled" ? "danger" : roomEnabled ? "secondary" : "positive"
                                 Layout.fillWidth: true
-                                onClicked: { if (roomStatus === "recording") recordingManager.stop_room(roomId); else { roomModel.toggleRoom(roomId); if (!roomEnabled) monitorCoordinator.checkNow(roomId) } }
+                                onClicked: { if (roomStatus === "recording" || roomStatus === "stalled") recordingManager.stop_room(roomId); else { roomModel.toggleRoom(roomId); if (!roomEnabled) monitorCoordinator.checkNow(roomId) } }
                             }
-                            AppButton { text: qsTr("检查并录制"); tone: "primary"; Layout.fillWidth: true; enabled: roomEnabled && roomStatus !== "recording" && roomStatus !== "converting" && roomStatus !== "preparing"; onClicked: monitorCoordinator.checkNow(roomId) }
+                            AppButton { text: qsTr("检查并录制"); tone: "primary"; Layout.fillWidth: true; enabled: roomEnabled && roomStatus !== "recording" && roomStatus !== "stalled" && roomStatus !== "converting" && roomStatus !== "preparing"; onClicked: monitorCoordinator.checkNow(roomId) }
                         }
                         RowLayout {
                             Layout.fillWidth: true; spacing: 6
                             AppButton { objectName: "previewButton"; text: qsTr("预览"); compact: true; onClicked: { previewController.play(roomId); previewDialog.open() } }
-                            AppButton { text: qsTr("编辑"); compact: true; enabled: roomStatus !== "recording" && roomStatus !== "converting" && roomStatus !== "preparing"; onClicked: editDialog.openFor(roomId, streamerName, roomTitle, roomUrl, fileName, checkIntervalSeconds, saveRoot, roomProxy, outputFormat, qualityName, recordingLine, segmentEnabled, segmentMinutes, convertToMp4, audioOnly, recordDanmaku) }
+                            AppButton { text: qsTr("编辑"); compact: true; enabled: roomStatus !== "recording" && roomStatus !== "stalled" && roomStatus !== "converting" && roomStatus !== "preparing"; onClicked: editDialog.openFor(roomId, streamerName, roomTitle, roomUrl, fileName, checkIntervalSeconds, saveRoot, roomProxy, outputFormat, qualityName, recordingLine, segmentEnabled, segmentMinutes, convertToMp4, audioOnly, recordDanmaku) }
                             Item { Layout.fillWidth: true }
-                            AppButton { text: qsTr("删除"); tone: "danger"; compact: true; enabled: roomStatus !== "recording" && roomStatus !== "converting" && roomStatus !== "preparing"; onClicked: roomModel.removeRoom(roomId) }
+                            AppButton { text: qsTr("删除"); tone: "danger"; compact: true; enabled: roomStatus !== "recording" && roomStatus !== "stalled" && roomStatus !== "converting" && roomStatus !== "preparing"; onClicked: roomModel.removeRoom(roomId) }
                         }
                     }
                 }

@@ -22,11 +22,13 @@
       errors.py               Resolver and recording error taxonomy/classifiers
       scheduler.py            Resolver deadlines, jitter, and retry timing
       rate_limit.py           Resolver concurrency and platform cooldown limits
+      recording.py            FFmpeg recording, progress tracking, and stall finalization
     tests/                    Automated regression and contract tests
       test_bilibili.py        Offline Bilibili request-boundary tests
       test_youtube.py         Offline YouTube request-boundary tests
       test_scheduler.py       Scheduler and resolver limit tests
       test_errors.py          Error taxonomy and safe-message tests
+      test_stall_detection.py Stall predicate and safe-stop regression tests
       test_settings_controller.py  Settings persistence and monitor wiring tests
     tools/                    Verification and runtime-preparation tools
     packaging/                PyInstaller and Inno Setup inputs
