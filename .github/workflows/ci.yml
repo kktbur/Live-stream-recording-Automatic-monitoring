@@ -21,8 +21,8 @@ jobs:
 
     env:
       QT_QPA_PLATFORM: offscreen
-      FFMPEG_ARCHIVE_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-28-17-08/ffmpeg-n9.0.1-11-ge47273f4d9-win64-lgpl-shared-9.0.zip
-      FFMPEG_ARCHIVE_SHA256: 9076e7ae97240a704a3c59d26401986ae29c7914a62213ec8c911aa8d0b06356
+      FFMPEG_ARCHIVE_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-31-13-27/ffmpeg-n9.0.1-11-ge47273f4d9-win64-lgpl-shared-9.0.zip
+      FFMPEG_ARCHIVE_SHA256: 83a824f0729a69d143c9865125bb86988a11dd388325f0033711045522068aa0
       NODE_ARCHIVE_URL: https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip
       NODE_ARCHIVE_SHA256: 6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba
 
